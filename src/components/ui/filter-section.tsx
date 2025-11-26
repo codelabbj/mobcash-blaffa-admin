@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import {CircleX, Search, X} from "lucide-react"
+import {CircleX, Search} from "lucide-react"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 
 interface FilterOption {
