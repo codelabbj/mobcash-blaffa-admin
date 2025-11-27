@@ -1,14 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import {useEffect, useState} from "react"
 import { ArrowUpRight } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, formatDate, formatCurrency } from "@/lib/utils"
 import { DashboardContent } from "@/components/layout/dashboard-content"
 import { FilterSection } from "@/components/ui/filter-section"
 import { RequestCard } from "@/components/ui/request-card"
 import { SidePanel } from "@/components/ui/side-panel"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { ActionButtons } from "@/components/ui/action-buttons"
+import { NotesDialog } from "@/components/ui/notes-dialog"
 import {
     Pagination,
     PaginationContent, PaginationEllipsis,
@@ -16,6 +17,11 @@ import {
     PaginationNext,
     PaginationPrevious
 } from "@/components/ui/pagination"
+import {useApproveRecharge, useRecharge, useRejectRecharge} from "@/hooks/use-recharge";
+import {Recharge} from "@/lib/types";
+import {toast} from "sonner";
+import RequestCardSkeleton from "@/components/ui/request-card-skeleton";
+import Link from "next/link";
 
 interface RechargeRequest {
     id: string
@@ -31,148 +37,6 @@ interface RechargeRequest {
     notes?: string
 }
 
-// Mock data
-const mockRecharges: RechargeRequest[] = [
-    {
-        id: "RQ001",
-        userName: "John Doe",
-        userPhone: "+1 234 567 8900",
-        amount: 500,
-        platform: "Mobile Money",
-        paymentMethod: "Credit Card",
-        status: "pending",
-        createdAt: "2025-11-25",
-        userEmail: "john@example.com",
-        transactionId: "TXN-2025-11-001",
-        notes: "User requested quick processing",
-    },
-    {
-        id: "RQ002",
-        userName: "Jane Smith",
-        userPhone: "+1 234 567 8901",
-        amount: 1000,
-        platform: "Bank Transfer",
-        paymentMethod: "Bank Account",
-        status: "pending",
-        createdAt: "2025-11-25",
-        userEmail: "jane@example.com",
-        transactionId: "TXN-2025-11-002",
-    },
-    {
-        id: "RQ003",
-        userName: "Mike Johnson",
-        userPhone: "+1 234 567 8902",
-        amount: 250,
-        platform: "Wallet",
-        paymentMethod: "Debit Card",
-        status: "approved",
-        createdAt: "2025-11-24",
-        userEmail: "mike@example.com",
-        transactionId: "TXN-2025-11-003",
-    },
-    {
-        id: "RQ004",
-        userName: "Sarah Wilson",
-        userPhone: "+1 234 567 8903",
-        amount: 750,
-        platform: "Mobile Money",
-        paymentMethod: "Credit Card",
-        status: "pending",
-        createdAt: "2025-11-25",
-        userEmail: "sarah@example.com",
-        transactionId: "TXN-2025-11-004",
-    },
-    {
-        id: "RQ005",
-        userName: "Tom Brown",
-        userPhone: "+1 234 567 8904",
-        amount: 300,
-        platform: "Bank Transfer",
-        paymentMethod: "Bank Account",
-        status: "rejected",
-        createdAt: "2025-11-23",
-        userEmail: "tom@example.com",
-        transactionId: "TXN-2025-11-005",
-    },
-    {
-        id: "RQ006",
-        userName: "Emma Davis",
-        userPhone: "+1 234 567 8905",
-        amount: 600,
-        platform: "Wallet",
-        paymentMethod: "Debit Card",
-        status: "pending",
-        createdAt: "2025-11-25",
-        userEmail: "emma@example.com",
-        transactionId: "TXN-2025-11-006",
-    },
-    {
-        id: "RQ031",
-        userName: "John Doe",
-        userPhone: "+1 234 567 8900",
-        amount: 500,
-        platform: "Mobile Money",
-        paymentMethod: "Credit Card",
-        status: "pending",
-        createdAt: "2025-11-25",
-        userEmail: "john@example.com",
-        transactionId: "TXN-2025-11-001",
-        notes: "User requested quick processing",
-    },
-    {
-        id: "RQ041",
-        userName: "John Doe",
-        userPhone: "+1 234 567 8900",
-        amount: 500,
-        platform: "Mobile Money",
-        paymentMethod: "Credit Card",
-        status: "pending",
-        createdAt: "2025-11-25",
-        userEmail: "john@example.com",
-        transactionId: "TXN-2025-11-001",
-        notes: "User requested quick processing",
-    },
-    {
-        id: "RQ051",
-        userName: "John Doe",
-        userPhone: "+1 234 567 8900",
-        amount: 500,
-        platform: "Mobile Money",
-        paymentMethod: "Credit Card",
-        status: "pending",
-        createdAt: "2025-11-25",
-        userEmail: "john@example.com",
-        transactionId: "TXN-2025-11-001",
-        notes: "User requested quick processing",
-    },
-    {
-        id: "RQ061",
-        userName: "John Doe",
-        userPhone: "+1 234 567 8900",
-        amount: 500,
-        platform: "Mobile Money",
-        paymentMethod: "Credit Card",
-        status: "pending",
-        createdAt: "2025-11-25",
-        userEmail: "john@example.com",
-        transactionId: "TXN-2025-11-001",
-        notes: "User requested quick processing",
-    },
-    {
-        id: "RQ071",
-        userName: "John Doe",
-        userPhone: "+1 234 567 8900",
-        amount: 500,
-        platform: "Mobile Money",
-        paymentMethod: "Credit Card",
-        status: "pending",
-        createdAt: "2025-11-25",
-        userEmail: "john@example.com",
-        transactionId: "TXN-2025-11-001",
-        notes: "User requested quick processing",
-    },
-]
-
 const statusOptions = [
     {value: "all", label: "Tous"},
     { value: "pending", label: "En attente" },
@@ -180,10 +44,10 @@ const statusOptions = [
     { value: "rejected", label: "Rejeter" },
 ]
 
-const platformOptions = [
+const paymentMethodOptions = [
     {value: "all", label: "Toutes"},
-    { value: "mobile-money", label: "Mobile Money" },
-    { value: "bank-transfer", label: "Transfert Bancaire" },
+    { value: "mobile_money", label: "Mobile Money" },
+    { value: "bank_transfer", label: "Transfert Bancaire" },
     { value: "wallet", label: "Portefeuille" },
 ]
 
@@ -191,22 +55,29 @@ export function RechargesContent() {
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedStatus, setSelectedStatus] = useState("")
     const [selectedPlatform, setSelectedPlatform] = useState("")
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("")
     const [currentPage, setCurrentPage] = useState(1)
     const [panelOpen, setPanelOpen] = useState(false)
-    const [selectedRequest, setSelectedRequest] = useState<RechargeRequest | null>(null)
+    const [selectedRequest, setSelectedRequest] = useState<Recharge | null>(null)
+    const [notesDialogOpen, setNotesDialogOpen] = useState(false)
+    const [dialogAction, setDialogAction] = useState<"approve" | "reject">("approve")
 
     const itemsPerPage = 6
     const [isProcessing, setIsProcessing] = useState(false)
 
+    const {data:recharges,error, isLoading} = useRecharge()
+    const approveRecharge = useApproveRecharge()
+    const rejectRecharge = useRejectRecharge()
+
     // Filter data
-    const filteredData = mockRecharges.filter((item) => {
+    const filteredData = recharges?.results.filter((item) => {
         const matchesSearch =
-            item.userName.toLowerCase().includes(searchQuery.toLowerCase()) || item.userPhone.includes(searchQuery)
-        const matchesStatus = !selectedStatus || selectedStatus ==="all" || item.status === selectedStatus
-        const matchesPlatform = !selectedPlatform || selectedPlatform ==="all" || item.platform.toLowerCase() === selectedPlatform.replace("-", " ")
+            item.user_email.toLowerCase().includes(searchQuery.toLowerCase()) || item.payment_reference.includes(searchQuery)
+        const matchesStatus = !selectedStatus || selectedStatus ==="all" || item.status.toLowerCase() === selectedStatus
+        const matchesPlatform = !selectedPaymentMethod || selectedPaymentMethod ==="all" || item.payment_method.toLowerCase() === selectedPaymentMethod
 
         return matchesSearch && matchesStatus && matchesPlatform
-    })
+    }) || []
 
     const totalPages = Math.ceil(filteredData.length / itemsPerPage)
     const startIndex = (currentPage - 1) * itemsPerPage
@@ -249,32 +120,55 @@ export function RechargesContent() {
     const handleClearFilters = () => {
         setSearchQuery("")
         setSelectedStatus("")
+        setSelectedPaymentMethod("")
         setSelectedPlatform("")
         setCurrentPage(1)
     }
 
-    const handleSelectRequest = (request: RechargeRequest) => {
+    const handleSelectRequest = (request: Recharge) => {
         setSelectedRequest(request)
         setPanelOpen(true)
     }
 
-    const handleAccept = async () => {
-        setIsProcessing(true)
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        console.log("Approved request:", selectedRequest?.id)
-        setIsProcessing(false)
-        setPanelOpen(false)
+    const handleAccept = () => {
+        setDialogAction("approve")
+        setNotesDialogOpen(true)
     }
 
-    const handleReject = async () => {
-        setIsProcessing(true)
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        console.log("Rejected request:", selectedRequest?.id)
-        setIsProcessing(false)
-        setPanelOpen(false)
+    const handleReject = () => {
+        setDialogAction("reject")
+        setNotesDialogOpen(true)
     }
+
+    const handleNotesSubmit = async (notes: string) => {
+        if (!selectedRequest) return
+        setIsProcessing(true)
+
+        try {
+            if (dialogAction === "approve") {
+                approveRecharge.mutate({
+                    recharge_id: selectedRequest.id,
+                    admin_notes: notes || undefined,
+                })
+            } else {
+                rejectRecharge.mutate({
+                    recharge_id: selectedRequest.id,
+                    admin_notes: notes,
+                })
+            }
+            setNotesDialogOpen(false)
+            setPanelOpen(false)
+        } finally {
+            setIsProcessing(false)
+        }
+    }
+
+    useEffect(() => {
+        if (error){
+            toast.error("Echec du chargement des recharges, veuillez réessayer")
+            console.log("An error occurred during recharges loading :",error)
+        }
+    })
 
     return (
         <DashboardContent>
@@ -287,7 +181,7 @@ export function RechargesContent() {
                     {/* Header */}
                     <div className="mb-6 space-y-2">
                         <p className="text-2xl font-bold">Demandes de recharge</p>
-                        <p className="text-sm text-muted-foreground">Gérer vos demandes de recharge d'application de paris</p>
+                        <p className="text-sm text-muted-foreground">Gérer vos demandes de recharge d&#39;application de paris</p>
                     </div>
 
                     {/* Filters */}
@@ -307,10 +201,10 @@ export function RechargesContent() {
                                     },
                                 },
                                 {
-                                    placeholder: "Plateforme",
-                                    label: "Plateforme",
+                                    placeholder: "Methode de paiement",
+                                    label: "Methode de paiement",
                                     value: selectedPlatform,
-                                    options: platformOptions,
+                                    options: paymentMethodOptions,
                                     onChange: (value) => {
                                         setSelectedPlatform(value)
                                         setCurrentPage(1)
@@ -327,38 +221,42 @@ export function RechargesContent() {
 
                     {/* Cards List */}
                     <div className="space-y-3 mb-6">
-                        {paginatedData.length > 0 ? (
-                            paginatedData.map((request) => (
-                                <RequestCard
-                                    key={request.id}
-                                    icon={<ArrowUpRight className="w-6 h-6" />}
-                                    title={request.userName}
-                                    subtitle={request.userPhone}
-                                    badge={<StatusBadge status={request.status} />}
-                                    amount={`${request.amount.toLocaleString()} FCFA`}
-                                    details={[
-                                        { label: "Plateforme", value: request.platform },
-                                        { label: "Méthode", value: request.paymentMethod },
-                                        { label: "Date", value: request.createdAt },
-                                        { label: "ID", value: request.id },
-                                    ]}
-                                    onClick={() => handleSelectRequest(request)}
-                                    isSelected={selectedRequest?.id === request.id}
-                                />
-                            ))
-                        ) : (
-                            <div className="flex items-center justify-center py-12 bg-card border border-border rounded-lg">
-                                <p className="text-muted-foreground">Aucune demande de recharge trouvée</p>
-                            </div>
-                        )}
+                        {
+                            isLoading? [1,2,3,4].map((recharge) => (
+                                <RequestCardSkeleton key={recharge}/>
+                                ))
+                                :paginatedData.length > 0 ? (
+                                paginatedData.map((request) => (
+                                    <RequestCard
+                                        key={request.id}
+                                        icon={<ArrowUpRight className="w-6 h-6" />}
+                                        title={request.payment_reference}
+                                        subtitle={request.user_email}
+                                        badge={<StatusBadge status={request.status.toLowerCase() as "pending" | "approved" | "processing" | "failed" | "cancelled" | "refunded"} />}
+                                        amount={formatCurrency(Number(request.amount))}
+                                        details={[
+                                            { label: "Méthode", value: request.payment_method.replace("_"," ") },
+                                            { label: "Date", value: formatDate(request.created_at) },
+                                        ]}
+                                        onClick={() => handleSelectRequest(request)}
+                                        isSelected={selectedRequest?.id === request.id}
+                                    />
+                                ))
+                            ) : (
+                                <div className="flex items-center justify-center py-12 bg-card border border-border rounded-lg">
+                                    <p className="text-muted-foreground">Aucune demande de recharge trouvée</p>
+                                </div>
+                            )
+                        }
+                        {}
                     </div>
 
                     {/* Pagination */}
                     {paginatedData.length > 0 && (
                         <div className="flex items-center justify-between mb-4">
                             <p className="text-muted-foreground mb-2 w-full">
-                                Affichage de {startIndex + 1} à {Math.min(endIndex, mockRecharges.length)} sur{" "}
-                                {mockRecharges.length} résultat{mockRecharges.length > 1 ? "s" : ""}
+                                Affichage de {startIndex + 1} à {Math.min(endIndex, recharges?.results.length || 0)} sur{" "}
+                                {recharges?.results.length} résultat{recharges?.results.length || 0 > 1 ? "s" : ""}
                             </p>
                             <Pagination>
                                 <PaginationContent>
@@ -408,14 +306,13 @@ export function RechargesContent() {
                     title="Détails de la Recharge"
                     embedded={true}
                     footer={
-                        selectedRequest?.status === "pending" && (
+                        selectedRequest?.status.toLowerCase() === "pending" && (
                             <ActionButtons
                                 onAccept={handleAccept}
                                 onReject={handleReject}
                                 acceptLabel="Approuver"
                                 rejectLabel="Rejeter"
                                 isLoading={isProcessing}
-                                layout="vertical"
                             />
                         )
                     }
@@ -427,16 +324,8 @@ export function RechargesContent() {
                                 <h3 className="text-sm font-semibold text-muted-foreground mb-3">Informations Utilisateur</h3>
                                 <div className="space-y-2">
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-muted-foreground">Nom</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedRequest.userName}</span>
-                                    </div>
-                                    <div className="flex justify-between">
                                         <span className="text-sm text-muted-foreground">Email</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedRequest.userEmail}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-sm text-muted-foreground">Téléphone</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedRequest.userPhone}</span>
+                                        <span className="text-sm font-medium text-foreground">{selectedRequest.user_email}</span>
                                     </div>
                                 </div>
                             </div>
@@ -448,20 +337,16 @@ export function RechargesContent() {
                                     <div className="flex justify-between">
                                         <span className="text-sm text-muted-foreground">Montant</span>
                                         <span className="text-sm font-bold text-foreground">
-                      ₦{selectedRequest.amount.toLocaleString()}
-                    </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-sm text-muted-foreground">Plateforme</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedRequest.platform}</span>
+                                            {formatCurrency(Number(selectedRequest.amount))}
+                                        </span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-sm text-muted-foreground">Méthode de Paiement</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedRequest.paymentMethod}</span>
+                                        <span className="text-sm font-medium text-foreground">{selectedRequest.payment_method.replace("_", " ")}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-sm text-muted-foreground">Date</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedRequest.createdAt}</span>
+                                        <span className="text-sm font-medium text-foreground">{formatDate(selectedRequest.created_at)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -471,17 +356,19 @@ export function RechargesContent() {
                                 <h3 className="text-sm font-semibold text-muted-foreground mb-3">Détails de la Demande</h3>
                                 <div className="space-y-2">
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-muted-foreground">ID Demande</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedRequest.id}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-sm text-muted-foreground">ID Transaction</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedRequest.transactionId}</span>
-                                    </div>
-                                    <div className="flex justify-between">
                                         <span className="text-sm text-muted-foreground">Statut</span>
-                                        <StatusBadge status={selectedRequest.status} />
+                                        <StatusBadge status={selectedRequest.status.toLowerCase() as "pending" | "approved" | "processing" | "failed" | "cancelled" | "refunded"} />
                                     </div>
+
+                                    {
+                                        selectedRequest.payment_proof_url!==null && (
+                                            <div className="flex justify-between">
+                                                <span className="text-sm text-muted-foreground">Preuve de paiement</span>
+                                                <Link href={selectedRequest.payment_proof_url} target="_blank" className="text-sm font-medium underline">Voir</Link>
+                                            </div>
+                                        )
+                                    }
+
                                 </div>
                             </div>
 
@@ -492,9 +379,35 @@ export function RechargesContent() {
                                     <p className="text-sm text-foreground bg-muted p-3 rounded-lg">{selectedRequest.notes}</p>
                                 </div>
                             )}
+
+                            {selectedRequest.admin_notes && (
+                                <div className="border-t border-border pt-6">
+                                    <h3 className="text-sm font-semibold text-muted-foreground mb-3">Notes Administrateur</h3>
+                                    <p className="text-sm text-foreground bg-muted p-3 rounded-lg">{selectedRequest.admin_notes}</p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </SidePanel>
+
+                {/* Notes Dialog */}
+                <NotesDialog
+                    isOpen={notesDialogOpen}
+                    onClose={() => setNotesDialogOpen(false)}
+                    onSubmit={handleNotesSubmit}
+                    title={
+                        dialogAction === "approve"
+                            ? "Approuver la recharge"
+                            : "Rejeter la recharge"
+                    }
+                    description={
+                        dialogAction === "approve"
+                            ? "Vous êtes sur le point d'approuver cette demande de recharge."
+                            : "Vous êtes sur le point de rejeter cette demande de recharge."
+                    }
+                    action={dialogAction}
+                    isLoading={isProcessing}
+                />
             </div>
         </DashboardContent>
     )

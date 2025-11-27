@@ -1,7 +1,16 @@
 import { cn } from "@/lib/utils"
 
-type StatusType = "pending" | "approved" | "rejected" | "active" | "inactive" | "processing"
-
+type StatusType = "pending" | "approved" | "processing" | "failed" | "cancelled" | "refunded" | "active" | "inactive"
+const statusLabel = [
+    {value:"pending",label:"En attente"},
+    {value:"approved",label:"Approuver"},
+    {value:"processing",label:"En cours"},
+    {value:"failed",label:"Echec"},
+    {value:"cancelled",label:"Annuler"},
+    {value: "Refunded",label:"Rembourser"},
+    {value:"active",label:"Actif"},
+    {value:"inactive",label:"Inactif"},
+]
 const statusStyles: Record<StatusType, { bg: string; text: string; dot: string }> = {
     pending: {
         bg: "bg-yellow-50 dark:bg-yellow-950",
@@ -13,17 +22,17 @@ const statusStyles: Record<StatusType, { bg: string; text: string; dot: string }
         text: "text-green-700 dark:text-green-300",
         dot: "bg-green-500",
     },
-    rejected: {
+    cancelled: {
         bg: "bg-red-50 dark:bg-red-950",
         text: "text-red-700 dark:text-red-300",
         dot: "bg-red-500",
     },
-    active: {
+    refunded: {
         bg: "bg-blue-50 dark:bg-blue-950",
         text: "text-blue-700 dark:text-blue-300",
         dot: "bg-blue-500",
     },
-    inactive: {
+    failed: {
         bg: "bg-gray-100 dark:bg-gray-800",
         text: "text-gray-600 dark:text-gray-400",
         dot: "bg-gray-500",
@@ -33,6 +42,16 @@ const statusStyles: Record<StatusType, { bg: string; text: string; dot: string }
         text: "text-purple-700 dark:text-purple-300",
         dot: "bg-purple-500",
     },
+    active :{
+        bg: "bg-green-50 dark:bg-green-950",
+        text: "text-green-700 dark:text-green-300",
+        dot: "bg-green-500",
+    },
+    inactive :{
+        bg: "bg-gray-100 dark:bg-gray-800",
+        text: "text-gray-600 dark:text-gray-400",
+        dot: "bg-gray-500",
+    }
 }
 
 interface StatusBadgeProps {
@@ -44,8 +63,6 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status, label, showDot = true, className }: StatusBadgeProps) {
     const styles = statusStyles[status]
-    const displayLabel = label || status.charAt(0).toUpperCase() + status.slice(1)
-
     return (
         <span
             className={cn(
@@ -56,7 +73,7 @@ export function StatusBadge({ status, label, showDot = true, className }: Status
             )}
         >
       {showDot && <span className={cn("w-2 h-2 rounded-full", styles.dot)} />}
-            {displayLabel}
+            {statusLabel.find((s)=> s.value === status)?.label || status}
     </span>
     )
 }

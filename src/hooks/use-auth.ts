@@ -17,7 +17,7 @@ export function useLogin() {
 
     return useMutation({
         mutationFn: async (data: LoginPayload) => {
-            const res = await api.post<LoginResponse>("/auth/login/", data)
+            const res = await api.post<LoginResponse>("v1/auth/login/", data)
             return res.data
         },
         onSuccess: (data) => {

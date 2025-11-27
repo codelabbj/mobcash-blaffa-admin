@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { ArrowUpRight, XSquare, Users, Shield, User, LogOut } from "lucide-react"
+import {ArrowUpRight, XSquare, Users, Shield, User, LogOut, Boxes} from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -39,6 +39,13 @@ const navItems = [
     href: "/cancellations",
     icon: XSquare,
   },
+    {
+        label: "Plateformes",
+        labelEn: "Platforms",
+        href: "/platform",
+        icon: Boxes
+
+    },
   {
     label: "Utilisateurs",
     labelEn: "Users",

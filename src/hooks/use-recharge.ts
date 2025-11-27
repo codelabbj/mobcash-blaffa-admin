@@ -3,6 +3,16 @@ import {PaginatedContent, Recharge} from "@/lib/types";
 import api from "@/lib/api";
 import {toast} from "sonner";
 
+
+interface RechargeApprovalInput {
+    recharge_id: string;
+    admin_notes?: string
+}
+
+interface RechargeCancellationInput {
+    recharge_id: string;
+    admin_notes: string
+}
 export function useRecharge(){
     return useQuery({
         queryKey:["recharge"],
@@ -16,8 +26,13 @@ export function useRecharge(){
 export function useApproveRecharge(){
     const query = useQueryClient()
     return useMutation({
-        mutationFn: async (recharge_id:string) => {
-            await api.post(`/admin/recharge-requests/${recharge_id}/approve/`)
+        mutationFn: async (data:RechargeApprovalInput) => {
+            if(data.admin_notes){
+                await api.post(`/admin/recharge-requests/${data.recharge_id}/approve/`,{admin_notes:data.admin_notes})
+            }else{
+                await api.post(`/admin/recharge-requests/${data.recharge_id}/approve/`)
+            }
+
         },
         onSuccess : () =>{
             toast.success("Recharge approvée avec succès");
@@ -33,8 +48,8 @@ export function useApproveRecharge(){
 export function useRejectRecharge(){
     const query = useQueryClient()
     return useMutation({
-        mutationFn: async (recharge_id:string) => {
-            await api.post(`/admin/recharge-requests/${recharge_id}/reject/`)
+        mutationFn: async (data: RechargeCancellationInput) => {
+            await api.post(`/admin/recharge-requests/${data.recharge_id}/reject/`,{admin_notes:data.admin_notes})
         },
         onSuccess : () =>{
             toast.success("Recharge rejetée avec succès")
