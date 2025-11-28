@@ -18,7 +18,6 @@ import {
 import { Button } from "@/components/ui/button"
 import {
     useUsers, useUserWallet, useUserTransactions, useUserPermissions, useActiveUser, useDeactivateUser,
-    userPermissionInput
 } from "@/hooks/use-users"
 import { AppUser } from "@/lib/types"
 import { toast } from "sonner"
