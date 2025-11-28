@@ -71,7 +71,7 @@ export function SidePanel({ isOpen, onClose, title, children, footer, width = "l
         return (
             <div
                 className={cn(
-                    "bg-card border border-border rounded-xl shadow-xl h-[calc(100vh-200px)] overflow-y-scroll",
+                    "bg-card border border-border rounded-xl shadow-xl h-[calc(100vh-150px)] overflow-y-scroll",
                     "flex flex-col transition-all duration-300 overflow-hidden",
                     isOpen ? widthClasses[width] : "w-0",
                 )}

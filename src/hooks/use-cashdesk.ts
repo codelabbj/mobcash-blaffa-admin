@@ -36,17 +36,17 @@ export function useCreateCashDesk() {
             return res.data;
         },
         onSuccess:()=>{
-            toast.success("Caisse créer avec succès.");
+            toast.success("Cashdesk crée avec succès.");
             query.invalidateQueries({queryKey:["cashdesk"]})
         },
         onError:(error)=>{
-            toast.error("Echec de la création de caisse, veuillez réessayer");
+            toast.error("Echec de la création de cashdesk, veuillez réessayer");
             console.error("Error creating cashdesk:",error);
         }
     })
 }
 
-const useUpdateCashDesk = () => {
+export const useUpdateCashDesk = () => {
     const query = useQueryClient()
     return useMutation({
         mutationFn: async (data :CashDeskUpdateInput ) => {
@@ -54,17 +54,17 @@ const useUpdateCashDesk = () => {
             return res.data;
         },
         onSuccess:()=>{
-            toast.success("Caisse mis à jour avec succès")
+            toast.success("Cashdesk mis à jour avec succès")
             query.invalidateQueries({queryKey:["cashdesk"]})
         },
         onError:(error)=>{
-            toast.error("Echec de la mis à jour de caisse, veuillez réessayer");
+            toast.error("Echec de la mis à jour de cashdesk, veuillez réessayer");
             console.error("Error updating cashdesk:",error);
         }
     })
 }
 
-const useUpdateCashDeskStatus = () =>{
+export const useUpdateCashDeskStatus = () =>{
     const query = useQueryClient()
     return useMutation({
         mutationFn: async ({cashdesk_id,active}:{cashdesk_id:string,active:boolean} ) => {
@@ -77,9 +77,9 @@ const useUpdateCashDeskStatus = () =>{
         },
         onSuccess:({cashdesk_id,active}:{cashdesk_id:string,active:boolean})=>{
             if (active) {
-                toast.success("Caisse activer avec succès")
+                toast.success("Cashdesk activer avec succès")
             }else{
-                toast.success("Caisse désactiver avec succès")
+                toast.success("Cashdesk désactiver avec succès")
             }
             query.invalidateQueries({queryKey:["cashdesk"]})
         },
@@ -90,7 +90,7 @@ const useUpdateCashDeskStatus = () =>{
     })
 }
 
-const useUpdateCashDeskCredentials = () =>{
+export const useUpdateCashDeskCredentials = () =>{
     const query = useQueryClient()
 
     return useMutation({
@@ -99,7 +99,7 @@ const useUpdateCashDeskCredentials = () =>{
             return res.data;
         },
         onSuccess:()=>{
-            toast.success("Identifiants de la caisse mis à jour avec succès")
+            toast.success("Identifiants du cashdesk mis à jour avec succès")
             query.invalidateQueries({queryKey:["cashdesk"]})
         },
         onError:(error)=>{
@@ -109,7 +109,7 @@ const useUpdateCashDeskCredentials = () =>{
     })
 }
 
-const useDeleteCashDesk = () => {
+export const useDeleteCashDesk = () => {
     const query = useQueryClient()
     return useMutation({
         mutationFn: async (cashdesk_id:string)=>{
@@ -117,13 +117,14 @@ const useDeleteCashDesk = () => {
             return res.data;
         },
         onSuccess:()=>{
-            toast.success("Caisse supprimée avec succès")
+            toast.success("Cashdesk supprimée avec succès")
             query.invalidateQueries({queryKey:["cashdesk"]})
         },
         onError:(error)=>{
-            toast.error("Echec de la suppression de la caisse, veuillez réessayer");
+            toast.error("Echec de la suppression du cashdesk, veuillez réessayer");
             console.error("Error deleting cashdesk:",error);
         }
     })
 }
+
 

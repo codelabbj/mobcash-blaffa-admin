@@ -144,12 +144,46 @@ export interface CashDesk {
     name:                 string;
     cashdeskid:           string;
     is_active:            boolean;
-    has_credentials:      boolean;
     health_status:        string;
-    last_used_at:         Date | null;
-    consecutive_failures: number;
+    last_used_at:         null|Date;
     total_transactions:   number;
-    created_at:           Date;
-    updated_at:           Date;
-    balance:         number;
+    balance:              string;
+    limit:                string;
+    balance_last_updated: Date|null;
+}
+
+export interface AppUser {
+    id:             string;
+    email:          string;
+    first_name:     string;
+    last_name:      string;
+    phone_number:   string;
+    user_type:      string;
+    email_verified: boolean;
+    is_active:      boolean;
+    created_at:     Date;
+}
+
+export interface Wallet {
+    id:         string;
+    user:       string;
+    user_email: string;
+    balance:    string;
+    currency:   string;
+    created_at: Date;
+    updated_at: Date;
+}
+
+export interface  Permission {
+    id:                     string;
+    user:                   string;
+    platform:               string;
+    platform_name:          string;
+    platform_code:          string;
+    can_deposit:            boolean;
+    can_withdraw:           boolean;
+    daily_deposit_limit:    string;
+    daily_withdrawal_limit: string;
+    created_at:             Date;
+    updated_at:             Date;
 }

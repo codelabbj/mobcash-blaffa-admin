@@ -1,530 +1,657 @@
 "use client"
 
-import { useState } from "react"
-import { Eye, MoreHorizontal, Trash2, Edit2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { User } from "lucide-react"
+import { cn, formatDate, formatCurrency } from "@/lib/utils"
 import { DashboardContent } from "@/components/layout/dashboard-content"
 import { FilterSection } from "@/components/ui/filter-section"
+import { RequestCard } from "@/components/ui/request-card"
 import { SidePanel } from "@/components/ui/side-panel"
 import { StatusBadge } from "@/components/ui/status-badge"
-import { Pagination } from "@/components/ui/pagination"
+import {
+    Pagination,
+    PaginationContent, PaginationEllipsis,
+    PaginationItem, PaginationLink,
+    PaginationNext,
+    PaginationPrevious
+} from "@/components/ui/pagination"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-
-interface User {
-    id: string
-    name: string
-    email: string
-    phone: string
-    role: "admin" | "moderator" | "user"
-    status: "active" | "inactive"
-    permissions: string[]
-    joinDate: string
-    lastLogin?: string
-    department?: string
-}
-
-// Mock data
-const mockUsers: User[] = [
-    {
-        id: "U001",
-        name: "Admin User",
-        email: "admin@mobcash.com",
-        phone: "+1 234 567 8900",
-        role: "admin",
-        status: "active",
-        permissions: ["manage_users", "manage_permissions", "approve_requests", "view_reports"],
-        joinDate: "2025-01-15",
-        lastLogin: "2025-11-25",
-        department: "Management",
-    },
-    {
-        id: "U002",
-        name: "John Moderator",
-        email: "john.mod@mobcash.com",
-        phone: "+1 234 567 8901",
-        role: "moderator",
-        status: "active",
-        permissions: ["approve_requests", "view_reports", "manage_content"],
-        joinDate: "2025-02-10",
-        lastLogin: "2025-11-25",
-        department: "Operations",
-    },
-    {
-        id: "U003",
-        name: "Sarah Support",
-        email: "sarah.support@mobcash.com",
-        phone: "+1 234 567 8902",
-        role: "moderator",
-        status: "active",
-        permissions: ["view_reports", "manage_content"],
-        joinDate: "2025-03-05",
-        lastLogin: "2025-11-24",
-        department: "Support",
-    },
-    {
-        id: "U004",
-        name: "Mike Analytics",
-        email: "mike@mobcash.com",
-        phone: "+1 234 567 8903",
-        role: "user",
-        status: "active",
-        permissions: ["view_reports"],
-        joinDate: "2025-04-20",
-        lastLogin: "2025-11-23",
-        department: "Analytics",
-    },
-    {
-        id: "U005",
-        name: "Emily Former",
-        email: "emily.former@mobcash.com",
-        phone: "+1 234 567 8904",
-        role: "user",
-        status: "inactive",
-        permissions: [],
-        joinDate: "2025-01-01",
-        lastLogin: "2025-10-15",
-        department: "HR",
-    },
-    {
-        id: "U006",
-        name: "David Finance",
-        email: "david.finance@mobcash.com",
-        phone: "+1 234 567 8905",
-        role: "moderator",
-        status: "active",
-        permissions: ["view_reports", "approve_requests"],
-        joinDate: "2025-05-12",
-        lastLogin: "2025-11-25",
-        department: "Finance",
-    },
-]
-
-const roleOptions = [
-    { value: "admin", label: "Admin" },
-    { value: "moderator", label: "Moderator" },
-    { value: "user", label: "User" },
-]
+import {
+    useUsers, useUserWallet, useUserTransactions, useUserPermissions, useActiveUser, useDeactivateUser,
+    userPermissionInput
+} from "@/hooks/use-users"
+import { AppUser } from "@/lib/types"
+import { toast } from "sonner"
+import { Skeleton } from "@/components/ui/skeleton"
+import RequestCardSkeleton from "@/components/ui/request-card-skeleton"
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { usePlatform } from "@/hooks/use-platform"
+import { useAddUserPermission } from "@/hooks/use-users"
 
 const statusOptions = [
-    { value: "active", label: "Active" },
-    { value: "inactive", label: "Inactive" },
+    { value: "all", label: "Tous" },
+    { value: "true", label: "Actif" },
+    { value: "false", label: "Inactif" },
 ]
+
+const addPermissionSchema = z.object({
+    platform: z.string().min(1, "La plateforme est requise"),
+    can_deposit: z.boolean().default(true),
+    can_withdraw: z.boolean().default(true),
+    daily_deposit_limit: z.number().min(0).optional(),
+    daily_withdrawal_limit: z.number().min(0).optional(),
+})
+
+type AddPermissionInput = z.infer<typeof addPermissionSchema>
 
 export function UsersContent() {
     const [searchQuery, setSearchQuery] = useState("")
-    const [selectedRole, setSelectedRole] = useState("")
     const [selectedStatus, setSelectedStatus] = useState("")
     const [currentPage, setCurrentPage] = useState(1)
     const [panelOpen, setPanelOpen] = useState(false)
-    const [selectedUser, setSelectedUser] = useState<User | null>(null)
-    const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
-    const [editMode, setEditMode] = useState(false)
+    const [selectedUser, setSelectedUser] = useState<AppUser | null>(null)
+    const [showAddPermissionForm, setShowAddPermissionForm] = useState(false)
+    const [isProcessing, setIsProcessing] = useState(false)
 
     const itemsPerPage = 10
 
-    // Filter data
-    const filteredData = mockUsers.filter((item) => {
-        const matchesSearch =
-            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.phone.includes(searchQuery)
-        const matchesRole = !selectedRole || item.role === selectedRole
-        const matchesStatus = !selectedStatus || item.status === selectedStatus
+    // API hooks - Always call hooks at the top level (required by React Rules of Hooks)
+    const { data: users, error, isLoading } = useUsers()
+    const activeUserMutation = useActiveUser()
+    const deactivateUserMutation = useDeactivateUser()
+    const { data: platformsData, isLoading: loadingPlatforms, error: platformError } = usePlatform()
+    const addPermissionMutation = useAddUserPermission()
 
-        return matchesSearch && matchesRole && matchesStatus
+    // Form for adding permission
+    const permissionForm = useForm<AddPermissionInput>({
+        resolver: zodResolver(addPermissionSchema),
+        defaultValues: {
+            platform: "",
+            can_deposit: true,
+            can_withdraw: true,
+            daily_deposit_limit: undefined,
+            daily_withdrawal_limit: undefined,
+        },
     })
 
+    // Wallet, Transactions, and Permissions hooks - will be triggered manually when user is selected
+    const walletQuery = useUserWallet(selectedUser?.id || "")
+    const transactionsQuery = useUserTransactions(selectedUser?.id || "")
+    const permissionsQuery = useUserPermissions(selectedUser?.id || "")
+
+    // Load user data when a user is selected
+    useEffect(() => {
+        if (selectedUser && panelOpen) {
+            walletQuery.mutate()
+            transactionsQuery.mutate()
+            permissionsQuery.mutate()
+        }
+    }, [selectedUser?.id, panelOpen])
+
+    // Reset form when user is selected
+    useEffect(() => {
+        if (selectedUser) {
+            permissionForm.reset({
+                platform: "",
+                can_deposit: true,
+                can_withdraw: true,
+                daily_deposit_limit: undefined,
+                daily_withdrawal_limit: undefined,
+            })
+        }
+    }, [selectedUser?.id])
+
+    // Handle platform load error
+    useEffect(() => {
+        if (platformError) {
+            toast.error("Échec du chargement des plateformes, veuillez réessayer")
+            console.error("Error loading platforms:", platformError)
+        }
+    }, [platformError])
+
+    // Filter data
+    const filteredData = users?.results.filter((item) => {
+        const matchesSearch =
+            item.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.phone_number.includes(searchQuery)
+        const matchesStatus = !selectedStatus || selectedStatus === "all" || String(item.is_active) === selectedStatus
+
+        return matchesSearch && matchesStatus
+    }) || []
+
     const totalPages = Math.ceil(filteredData.length / itemsPerPage)
-    const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    const paginatedData = filteredData.slice(startIndex, endIndex)
+
+    const getPageNumber = () => {
+        const pages = []
+        const maxVisiblePage = 5
+
+        if (totalPages <= maxVisiblePage) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i)
+            }
+        } else {
+            if (currentPage >= 3) {
+                for (let i = 1; i <= 4; i++) {
+                    pages.push(i)
+                }
+                pages.push("ellipsis")
+                pages.push(totalPages)
+            } else if (currentPage >= totalPages - 2) {
+                pages.push(1)
+                pages.push("ellipsis")
+                for (let i = currentPage - 1; i <= totalPages; i++) {
+                    pages.push(i)
+                }
+            } else {
+                pages.push("ellipsis")
+                for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+                    pages.push(i)
+                }
+                pages.push("ellipsis")
+            }
+        }
+
+        return pages
+    }
 
     const handleClearFilters = () => {
         setSearchQuery("")
-        setSelectedRole("")
         setSelectedStatus("")
         setCurrentPage(1)
     }
 
-    const handleSelectRow = (rowIndex: number) => {
-        const newSelected = new Set(selectedRows)
-        if (newSelected.has(rowIndex)) {
-            newSelected.delete(rowIndex)
-        } else {
-            newSelected.add(rowIndex)
-        }
-        setSelectedRows(newSelected)
-    }
-
-    const handleSelectAll = (selected: boolean) => {
-        if (selected) {
-            setSelectedRows(new Set(paginatedData.map((_, idx) => idx)))
-        } else {
-            setSelectedRows(new Set())
-        }
-    }
-
-    const handleViewUser = (user: User) => {
+    const handleSelectUser = (user: AppUser) => {
         setSelectedUser(user)
-        setEditMode(false)
+        setShowAddPermissionForm(false)
         setPanelOpen(true)
     }
 
-    const handleEditUser = () => {
-        setEditMode(true)
+    const handleToggleStatus = async () => {
+        if (!selectedUser) return
+        setIsProcessing(true)
+        try {
+            if (selectedUser.is_active) {
+                deactivateUserMutation?.mutate(selectedUser.id,{
+                    onSuccess: () => {
+                        setSelectedUser({...selectedUser, is_active: !selectedUser.is_active})
+                    }
+                })
+            } else {
+                activeUserMutation?.mutate(selectedUser.id,{
+                    onSuccess: () => {
+                        setSelectedUser({...selectedUser, is_active: !selectedUser.is_active})
+                    }
+                })
+            }
+        } finally {
+            setIsProcessing(false)
+        }
     }
 
-    const handleSaveUser = () => {
-        console.log("User updated:", selectedUser)
-        setEditMode(false)
+    const handleAddPermission = async (data: AddPermissionInput) => {
+        if (!selectedUser) return
+        setIsProcessing(true)
+        try {
+            addPermissionMutation.mutate({
+                id: selectedUser.id,
+                data: {
+                    platform: data.platform,
+                    can_deposit: data.can_deposit,
+                    can_withdraw: data.can_withdraw,
+                    daily_deposit_limit: data.daily_deposit_limit,
+                    daily_withdrawal_limit: data.daily_withdrawal_limit,
+                }
+            })
+            permissionForm.reset()
+            setShowAddPermissionForm(false)
+            permissionsQuery.mutate()
+        } catch (error) {
+            console.error("Error adding permission:", error)
+            toast.error("Erreur lors de l'ajout de la permission")
+        } finally {
+            setIsProcessing(false)
+        }
     }
 
-    const handleDeleteUser = (userId: string) => {
-        console.log("Delete user:", userId)
-    }
+    useEffect(() => {
+        if (error) {
+            toast.error("Échec du chargement des utilisateurs, veuillez réessayer")
+            console.error("Error loading users:", error)
+        }
+    }, [error])
 
-    const columns = [
-        { key: "name", label: "User", width: "200px" },
-        { key: "email", label: "Email", width: "250px" },
-        { key: "role", label: "Role", width: "120px" },
-        { key: "status", label: "Status", width: "120px" },
-        { key: "department", label: "Department", width: "150px" },
-        { key: "joinDate", label: "Joined", width: "130px" },
-    ]
-
-    const rows = paginatedData.map((user) => ({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: <span className="text-sm font-medium">{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</span>,
-        status: <StatusBadge status={user.status} />,
-        department: user.department || "-",
-        joinDate: user.joinDate,
-    }))
 
     return (
         <DashboardContent>
-            {/* Header */}
-            <div className="mb-6 flex items-center justify-between">
-                <div>
-                    <p className="text-muted-foreground">
-                        {filteredData.length} user{filteredData.length !== 1 ? "s" : ""}
-                    </p>
-                </div>
-                <Button>Add User</Button>
-            </div>
-
-            {/* Bulk Actions Bar */}
-            {selectedRows.size > 0 && (
-                <div className="mb-6 p-4 bg-muted border border-border rounded-lg flex items-center justify-between">
-          <span className="text-sm font-medium text-foreground">
-            {selectedRows.size} user{selectedRows.size !== 1 ? "s" : ""} selected
-          </span>
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                            Change Role
-                        </Button>
-                        <Button variant="destructive" size="sm">
-                            Deactivate
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {/* Filters */}
-            <div className="mb-6">
-                <FilterSection
-                    searchValue={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    filters={[
-                        {
-                            label: "Role",
-                            value: selectedRole,
-                            options: roleOptions,
-                            onChange: (value) => {
-                                setSelectedRole(value)
-                                setCurrentPage(1)
-                            },
-                        },
-                        {
-                            label: "Status",
-                            value: selectedStatus,
-                            options: statusOptions,
-                            onChange: (value) => {
-                                setSelectedStatus(value)
-                                setCurrentPage(1)
-                            },
-                        },
-                    ]}
-                    onClearAll={handleClearFilters}
-                />
-            </div>
-
-            {/* Data Table */}
-            <div className="mb-6">
-                {paginatedData.length > 0 ? (
-                    <div className="border border-border rounded-lg overflow-hidden">
-                        <table className="w-full">
-                            {/* Header */}
-                            <thead className="bg-muted border-b border-border">
-                            <tr>
-                                <th className="w-12 px-4 py-3">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedRows.size === paginatedData.length && paginatedData.length > 0}
-                                        onChange={(e) => handleSelectAll(e.target.checked)}
-                                        className="w-4 h-4 rounded"
-                                    />
-                                </th>
-                                {columns.map((col) => (
-                                    <th
-                                        key={col.key}
-                                        className="px-4 py-3 text-left text-sm font-semibold text-foreground"
-                                        style={{ width: col.width }}
-                                    >
-                                        {col.label}
-                                    </th>
-                                ))}
-                                <th className="w-12 px-4 py-3" />
-                            </tr>
-                            </thead>
-
-                            {/* Body */}
-                            <tbody>
-                            {rows.map((row, idx) => (
-                                <tr key={idx} className="border-b border-border hover:bg-muted/50 transition-colors">
-                                    <td className="px-4 py-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedRows.has(idx)}
-                                            onChange={() => handleSelectRow(idx)}
-                                            className="w-4 h-4 rounded"
-                                        />
-                                    </td>
-                                    <td
-                                        className="px-4 py-3 text-sm font-medium text-foreground cursor-pointer hover:text-accent"
-                                        onClick={() => handleViewUser(paginatedData[idx])}
-                                    >
-                                        {row.name}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-foreground">{row.email}</td>
-                                    <td className="px-4 py-3 text-sm">{row.role}</td>
-                                    <td className="px-4 py-3 text-sm">{row.status}</td>
-                                    <td className="px-4 py-3 text-sm text-foreground">{row.department}</td>
-                                    <td className="px-4 py-3 text-sm text-muted-foreground">{row.joinDate}</td>
-                                    <td className="px-4 py-3">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <button className="p-2 hover:bg-muted rounded-lg transition-colors">
-                                                    <MoreHorizontal className="w-4 h-4" />
-                                                </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleViewUser(paginatedData[idx])}>
-                                                    <Eye className="w-4 h-4 mr-2" />
-                                                    View
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => {
-                                                        handleViewUser(paginatedData[idx])
-                                                        setEditMode(true)
-                                                        setPanelOpen(true)
-                                                    }}
-                                                >
-                                                    <Edit2 className="w-4 h-4 mr-2" />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    className="text-destructive"
-                                                    onClick={() => handleDeleteUser(paginatedData[idx].id)}
-                                                >
-                                                    <Trash2 className="w-4 h-4 mr-2" />
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <div className="flex items-center justify-center py-12 bg-card border border-border rounded-lg">
-                        <p className="text-muted-foreground">No users found</p>
-                    </div>
-                )}
-            </div>
-
-            {/* Pagination */}
-            {paginatedData.length > 0 && (
-                <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                    totalItems={filteredData.length}
-                    itemsPerPage={itemsPerPage}
-                />
-            )}
-
-            {/* Side Panel */}
-            <SidePanel
-                isOpen={panelOpen}
-                onClose={() => setPanelOpen(false)}
-                title={editMode ? "Edit User" : "User Details"}
-                width="md"
-                footer={
-                    editMode && (
-                        <div className="flex gap-3">
-                            <Button onClick={handleSaveUser} className="flex-1">
-                                Save Changes
-                            </Button>
-                            <Button onClick={() => setEditMode(false)} variant="outline" className="flex-1">
-                                Cancel
-                            </Button>
-                        </div>
-                    )
-                }
-            >
-                {selectedUser && (
-                    <div className="space-y-6">
-                        {/* User Profile */}
-                        <div className="text-center pb-6 border-b border-border">
-                            <div className="w-16 h-16 rounded-full bg-accent text-accent-foreground flex items-center justify-center mx-auto mb-3 text-2xl font-bold">
-                                {selectedUser.name
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .join("")}
-                            </div>
-                            <h2 className="text-lg font-bold text-foreground">{selectedUser.name}</h2>
-                            <p className="text-sm text-muted-foreground">{selectedUser.role.toUpperCase()}</p>
-                        </div>
-
-                        {/* Personal Information */}
+            <div className="flex gap-6 min-h-[500px]">
+                <div className={cn("transition-all duration-300", panelOpen ? "flex-1 lg:max-w-[calc(100%-320px)]" : "flex-1")} style={{minWidth: 0}}>
+                    <div className="mb-6 flex items-center justify-between">
                         <div>
-                            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Personal Information</h3>
-                            <div className="space-y-3">
-                                {editMode ? (
-                                    <>
-                                        <div>
-                                            <label className="text-xs text-muted-foreground font-medium">Name</label>
-                                            <input
-                                                type="text"
-                                                value={selectedUser.name}
-                                                className="w-full mt-1 px-3 py-2 rounded-lg bg-input border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-muted-foreground font-medium">Email</label>
-                                            <input
-                                                type="email"
-                                                value={selectedUser.email}
-                                                className="w-full mt-1 px-3 py-2 rounded-lg bg-input border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-muted-foreground font-medium">Phone</label>
-                                            <input
-                                                type="tel"
-                                                value={selectedUser.phone}
-                                                className="w-full mt-1 px-3 py-2 rounded-lg bg-input border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                            />
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="flex justify-between">
-                                            <span className="text-sm text-muted-foreground">Email</span>
-                                            <span className="text-sm font-medium text-foreground">{selectedUser.email}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-sm text-muted-foreground">Phone</span>
-                                            <span className="text-sm font-medium text-foreground">{selectedUser.phone}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-sm text-muted-foreground">Department</span>
-                                            <span className="text-sm font-medium text-foreground">{selectedUser.department || "-"}</span>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
+                            <p className="text-2xl font-bold">Utilisateurs</p>
+                            <p className="text-sm text-muted-foreground">
+                                Gérer les utilisateurs de votre plateforme
+                            </p>
                         </div>
+                    </div>
 
-                        {/* Role & Status */}
-                        <div className="border-t border-border pt-6">
-                            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Role & Status</h3>
-                            <div className="space-y-3">
-                                {editMode ? (
-                                    <>
-                                        <div>
-                                            <label className="text-xs text-muted-foreground font-medium">Role</label>
-                                            <select className="w-full mt-1 px-3 py-2 rounded-lg bg-input border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
-                                                <option value="admin">Admin</option>
-                                                <option value="moderator">Moderator</option>
-                                                <option value="user">User</option>
-                                            </select>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
+                    {/* Filters */}
+                    <div className="mb-6">
+                        <FilterSection
+                            searchValue={searchQuery}
+                            onSearchChange={setSearchQuery}
+                            filters={[
+                                {
+                                    placeholder: "Statut",
+                                    label: "Statut",
+                                    value: selectedStatus,
+                                    options: statusOptions,
+                                    onChange: (value) => {
+                                        setSelectedStatus(value)
+                                        setCurrentPage(1)
+                                    },
+                                },
+                            ]}
+                            onClearAll={handleClearFilters}
+                        />
+                    </div>
+
+                    <p className="text-muted-foreground mb-2">
+                        {filteredData.length} utilisateur{filteredData.length !== 1 ? "s" : ""}
+                    </p>
+
+                    {/* Cards List */}
+                    <div className="space-y-3 mb-6">
+                        {isLoading ? (
+                            [1, 2, 3, 4].map((i) => (
+                                <RequestCardSkeleton key={i} />
+                            ))
+                        ) : paginatedData.length > 0 ? (
+                            paginatedData.map((user) => (
+                                <RequestCard
+                                    key={user.id}
+                                    icon={<User className="w-6 h-6" />}
+                                    title={`${user.first_name} ${user.last_name}`}
+                                    subtitle={user.email}
+                                    badge={<StatusBadge status={user.is_active ? "active" : "inactive"} />}
+                                    details={[
+                                        { label: "Type", value: user.user_type },
+                                        { label: "Créé le", value: formatDate(user.created_at) },
+                                    ]}
+                                    onClick={() => handleSelectUser(user)}
+                                    isSelected={selectedUser?.id === user.id}
+                                />
+                            ))
+                        ) : (
+                            <div className="flex items-center justify-center py-12 bg-card border border-border rounded-lg">
+                                <p className="text-muted-foreground">Aucun utilisateur trouvé</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Pagination */}
+                    {paginatedData.length > 0 && (
+                        <div className="flex items-center justify-between mb-4">
+                            <p className="text-muted-foreground mb-2 w-full">
+                                Affichage de {startIndex + 1} à {Math.min(endIndex, users?.results.length || 0)} sur{" "}
+                                {users?.results.length} résultat{users?.results.length || 0 > 1 ? "s" : ""}
+                            </p>
+                            <Pagination>
+                                <PaginationContent>
+                                    <PaginationItem>
+                                        <PaginationPrevious href="#" onClick={(e) => {
+                                            e.preventDefault()
+                                            if (currentPage - 1 > 0) setCurrentPage(currentPage - 1)
+                                        }}
+                                                            className={currentPage === 1 ? "pointer-event-none opacity-50" : "cursor-pointer"}
+                                        />
+                                    </PaginationItem>
+                                    {
+                                        getPageNumber().map((page, index) =>
+                                            page === "ellipsis" ? (
+                                                <PaginationItem key={`ellipsis-${index}`}>
+                                                    <PaginationEllipsis />
+                                                </PaginationItem>
+                                            ) : (
+                                                <PaginationItem key={page}>
+                                                    <PaginationLink href="#" onClick={(e) => {
+                                                        e.preventDefault()
+                                                        setCurrentPage(page as number)
+                                                    }}
+                                                                    isActive={currentPage == page}
+                                                                    className="cursor-pointer"
+                                                    >{page}</PaginationLink>
+                                                </PaginationItem>
+                                            )
+                                        )
+                                    }
+                                    <PaginationItem>
+                                        <PaginationNext href="#" onClick={(e) => {
+                                            e.preventDefault()
+                                            if (totalPages >= currentPage + 1) setCurrentPage(currentPage + 1)
+                                        }}
+                                                        className={currentPage === totalPages ? "pointer-event-none opacity-50" : "cursor-pointer"} />
+                                    </PaginationItem>
+                                </PaginationContent>
+                            </Pagination>
+                        </div>
+                    )}
+                </div>
+
+                {/* Panel Section - Embedded on desktop, hidden on mobile */}
+                <SidePanel
+                    isOpen={panelOpen}
+                    onClose={() => {
+                        setPanelOpen(false)
+                        setSelectedUser(null)
+                        setShowAddPermissionForm(false)
+                    }}
+                    title={showAddPermissionForm ? "Ajouter une permission" : "Détails de l'utilisateur"}
+                    embedded={true}
+                    footer={
+                        showAddPermissionForm ? (
+                            <div className="flex gap-3">
+                                <Button type="submit" form="add-permission-form" className="flex-1" disabled={isProcessing}>
+                                    Ajouter
+                                </Button>
+                                <Button onClick={() => setShowAddPermissionForm(false)} variant="outline" className="flex-1" disabled={isProcessing}>
+                                    Annuler
+                                </Button>
+                            </div>
+                        ) : (
+                            selectedUser && (
+                                <Button
+                                    onClick={handleToggleStatus}
+                                    disabled={isProcessing}
+                                    variant={selectedUser.is_active ? "destructive" : "default"}
+                                    className="w-full"
+                                >
+                                    {isProcessing
+                                        ? "Traitement..."
+                                        : selectedUser.is_active
+                                            ? "Désactiver"
+                                            : "Activer"}
+                                </Button>
+                            )
+                        )
+                    }
+                >
+                    {selectedUser && (
+                        <div className="space-y-6">
+                            {/* User Profile */}
+                            <div className="text-center pb-6 border-b border-border">
+                                <div className="w-16 h-16 rounded-full bg-accent text-accent-foreground flex items-center justify-center mx-auto mb-3 text-2xl font-bold">
+                                    {(selectedUser.first_name[0] + selectedUser.last_name[0]).toUpperCase()}
+                                </div>
+                                <h2 className="text-lg font-bold text-foreground">{selectedUser.first_name} {selectedUser.last_name}</h2>
+                                <p className="text-sm text-muted-foreground">{selectedUser.user_type}</p>
+                            </div>
+
+                            {/* Personal Information */}
+                            <div>
+                                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Informations personnelles</h3>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-muted-foreground">Email</span>
+                                        <span className="text-sm font-medium text-foreground">{selectedUser.email}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-muted-foreground">Téléphone</span>
+                                        <span className="text-sm font-medium text-foreground">{selectedUser.phone_number}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-muted-foreground">Créé le</span>
+                                        <span className="text-sm font-medium text-foreground">{formatDate(selectedUser.created_at)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-muted-foreground">Email vérifié</span>
+                                        <span className="text-sm font-medium text-foreground">
+                                            {selectedUser.email_verified ? "Oui" : "Non"}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Wallet Information */}
+                            <div className="border-t border-border pt-6">
+                                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Portefeuille</h3>
+                                {walletQuery?.isPending ? (
+                                    <div className="space-y-3">
+                                        <Skeleton className="h-5 w-full" />
+                                        <Skeleton className="h-5 w-3/4" />
+                                    </div>
+                                ) : walletQuery?.data ? (
+                                    <div className="space-y-2">
                                         <div className="flex justify-between">
-                                            <span className="text-sm text-muted-foreground">Role</span>
+                                            <span className="text-sm text-muted-foreground">Solde</span>
+                                            <span className="text-sm font-bold text-foreground">
+                                                {formatCurrency(Number(walletQuery.data.balance))} {walletQuery.data.currency}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-sm text-muted-foreground">Dernière mise à jour</span>
                                             <span className="text-sm font-medium text-foreground">
-                        {selectedUser.role.charAt(0).toUpperCase() + selectedUser.role.slice(1)}
-                      </span>
+                                                {formatDate(walletQuery.data.updated_at)}
+                                            </span>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-sm text-muted-foreground">Status</span>
-                                            <StatusBadge status={selectedUser.status} />
-                                        </div>
-                                    </>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">Aucun portefeuille trouvé</p>
                                 )}
                             </div>
-                        </div>
 
-                        {/* Permissions */}
-                        {!editMode && (
+                            {/* Transactions */}
                             <div className="border-t border-border pt-6">
                                 <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-                                    Permissions ({selectedUser.permissions.length})
+                                    Transactions récentes ({transactionsQuery?.data?.results.length || 0})
                                 </h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {selectedUser.permissions.length > 0 ? (
-                                        selectedUser.permissions.map((perm) => (
-                                            <span key={perm} className="text-xs px-2 py-1 bg-accent text-accent-foreground rounded-full">
-                        {perm.replace(/_/g, " ")}
-                      </span>
-                                        ))
+                                {transactionsQuery?.isPending ? (
+                                    <div className="space-y-3">
+                                        {[1, 2, 3].map((i) => (
+                                            <Skeleton key={i} className="h-5 w-full" />
+                                        ))}
+                                    </div>
+                                ) : transactionsQuery?.data && transactionsQuery.data.results.length > 0 ? (
+                                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                                        {transactionsQuery.data.results.slice(0, 5).map((trans) => (
+                                            <div key={trans.id} className="flex justify-between items-center p-2 bg-muted rounded">
+                                                <div className="flex-1">
+                                                    <p className="text-xs font-medium text-foreground">{trans.transaction_id}</p>
+                                                    <p className="text-xs text-muted-foreground">{trans.status_display}</p>
+                                                </div>
+                                                <span className="text-sm font-medium text-foreground">
+                                                    {formatCurrency(Number(trans.amount))}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        {transactionsQuery.data.results.length > 5 && (
+                                            <p className="text-xs text-muted-foreground text-center pt-2">
+                                                +{transactionsQuery.data.results.length - 5} de plus
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">Aucune transaction trouvée</p>
+                                )}
+                            </div>
+
+                            {/* Permissions */}
+                            {!showAddPermissionForm && (
+                                <div className="border-t border-border pt-6">
+                                    <h3 className="text-sm font-semibold text-muted-foreground mb-3">
+                                        Permissions ({permissionsQuery?.data?.length || 0})
+                                    </h3>
+                                    {permissionsQuery?.isPending ? (
+                                        <div className="space-y-3">
+                                            {[1, 2].map((i) => (
+                                                <Skeleton key={i} className="h-5 w-full" />
+                                            ))}
+                                        </div>
+                                    ) : permissionsQuery?.data && permissionsQuery.data.length > 0 ? (
+                                        <div className="space-y-3 max-h-48 overflow-y-auto">
+                                            {permissionsQuery.data.map((perm) => (
+                                                <div key={perm.id} className="p-3 bg-muted rounded-lg">
+                                                    <p className="text-sm font-medium text-foreground mb-2">
+                                                        {perm.platform_name} ({perm.platform_code})
+                                                    </p>
+                                                    <div className="space-y-1 text-xs text-muted-foreground">
+                                                        <div className="flex justify-between">
+                                                            <span>Dépôt autorisé :</span>
+                                                            <span className="text-foreground">
+                                                                {perm.can_deposit ? "Oui" : "Non"}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span>Retrait autorisé :</span>
+                                                            <span className="text-foreground">
+                                                                {perm.can_withdraw ? "Oui" : "Non"}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span>Limite dépôt/jour :</span>
+                                                            <span className="text-foreground">
+                                                                {formatCurrency(Number(perm.daily_deposit_limit))}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span>Limite retrait/jour :</span>
+                                                            <span className="text-foreground">
+                                                                {formatCurrency(Number(perm.daily_withdrawal_limit))}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     ) : (
-                                        <p className="text-sm text-muted-foreground">No permissions assigned</p>
+                                        <p className="text-sm text-muted-foreground">Aucune permission trouvée</p>
                                     )}
+                                    <Button onClick={() => setShowAddPermissionForm(true)} className="w-full mt-4" disabled={isProcessing || loadingPlatforms}>
+                                        Ajouter une permission
+                                    </Button>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {/* Activity */}
-                        {!editMode && (
-                            <div className="border-t border-border pt-6">
-                                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Activity</h3>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between">
-                                        <span className="text-sm text-muted-foreground">Joined</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedUser.joinDate}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-sm text-muted-foreground">Last Login</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedUser.lastLogin || "Never"}</span>
-                                    </div>
+                            {/* Add Permission Form */}
+                            {showAddPermissionForm && (
+                                <div className="border-t border-border pt-6">
+                                    <h3 className="text-sm font-semibold text-muted-foreground mb-3">Ajouter une permission</h3>
+                                    <Form {...permissionForm}>
+                                        <form
+                                            id="add-permission-form"
+                                            onSubmit={permissionForm.handleSubmit(handleAddPermission)}
+                                            className="space-y-4"
+                                        >
+                                            <FormField
+                                                control={permissionForm.control}
+                                                name="platform"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-xs">Plateforme</FormLabel>
+                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                            <FormControl>
+                                                                <SelectTrigger disabled={loadingPlatforms}>
+                                                                    <SelectValue placeholder="Sélectionnez une plateforme" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                {platformsData?.results.map((platform) => (
+                                                                    <SelectItem key={platform.id} value={platform.id}>
+                                                                        {platform.name}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            <FormField
+                                                control={permissionForm.control}
+                                                name="can_deposit"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex items-center justify-between rounded-lg border border-input p-3">
+                                                        <FormLabel className="text-xs font-medium">Autoriser le dépôt</FormLabel>
+                                                        <FormControl>
+                                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            <FormField
+                                                control={permissionForm.control}
+                                                name="can_withdraw"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex items-center justify-between rounded-lg border border-input p-3">
+                                                        <FormLabel className="text-xs font-medium">Autoriser le retrait</FormLabel>
+                                                        <FormControl>
+                                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            <FormField
+                                                control={permissionForm.control}
+                                                name="daily_deposit_limit"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-xs">Limite dépôt/jour (optionnel)</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            <FormField
+                                                control={permissionForm.control}
+                                                name="daily_withdrawal_limit"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-xs">Limite retrait/jour (optionnel)</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </form>
+                                    </Form>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
+                    )}
+                </SidePanel>
 
-                        {!editMode && (
-                            <Button onClick={handleEditUser} className="w-full">
-                                Edit User
-                            </Button>
-                        )}
-                    </div>
-                )}
-            </SidePanel>
+                </div>
         </DashboardContent>
     )
 }

@@ -1,469 +1,562 @@
 "use client"
 
-import { useState } from "react"
-import { Eye, MoreHorizontal, Trash2, Edit2, Plus } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Lock, Trash2 } from "lucide-react"
+import { cn, formatDate, formatCurrency } from "@/lib/utils"
 import { DashboardContent } from "@/components/layout/dashboard-content"
 import { FilterSection } from "@/components/ui/filter-section"
+import { RequestCard } from "@/components/ui/request-card"
 import { SidePanel } from "@/components/ui/side-panel"
+import { StatusBadge } from "@/components/ui/status-badge"
+import {
+    Pagination,
+    PaginationContent, PaginationEllipsis,
+    PaginationItem, PaginationLink,
+    PaginationNext,
+    PaginationPrevious
+} from "@/components/ui/pagination"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { usePermission, useUpdatePermission, useDeletePermission } from "@/hooks/use-permission"
+import { Permission } from "@/lib/types"
+import { toast } from "sonner"
+import { Skeleton } from "@/components/ui/skeleton"
+import RequestCardSkeleton from "@/components/ui/request-card-skeleton"
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { Switch } from "@/components/ui/switch"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 
-interface Permission {
-    id: string
-    name: string
-    slug: string
-    description: string
-    category: string
-    createdAt: string
-    updatedAt: string
-    usersCount: number
-}
-
-// Mock data
-const mockPermissions: Permission[] = [
-    {
-        id: "P001",
-        name: "Manage Users",
-        slug: "manage_users",
-        description: "Allow users to create, edit, and delete user accounts",
-        category: "User Management",
-        createdAt: "2025-01-10",
-        updatedAt: "2025-11-20",
-        usersCount: 2,
-    },
-    {
-        id: "P002",
-        name: "Manage Permissions",
-        slug: "manage_permissions",
-        description: "Allow users to manage and assign permissions",
-        category: "Permission Management",
-        createdAt: "2025-01-10",
-        updatedAt: "2025-11-20",
-        usersCount: 1,
-    },
-    {
-        id: "P003",
-        name: "Approve Requests",
-        slug: "approve_requests",
-        description: "Allow users to approve or reject recharge and cancellation requests",
-        category: "Request Management",
-        createdAt: "2025-01-15",
-        updatedAt: "2025-11-19",
-        usersCount: 3,
-    },
-    {
-        id: "P004",
-        name: "View Reports",
-        slug: "view_reports",
-        description: "Allow users to view analytics and financial reports",
-        category: "Reports",
-        createdAt: "2025-02-01",
-        updatedAt: "2025-11-18",
-        usersCount: 4,
-    },
-    {
-        id: "P005",
-        name: "Manage Content",
-        slug: "manage_content",
-        description: "Allow users to manage platform content and messaging",
-        category: "Content Management",
-        createdAt: "2025-02-15",
-        updatedAt: "2025-11-17",
-        usersCount: 2,
-    },
-    {
-        id: "P006",
-        name: "View Audit Logs",
-        slug: "view_audit_logs",
-        description: "Allow users to access system audit logs and activity records",
-        category: "Security",
-        createdAt: "2025-03-01",
-        updatedAt: "2025-11-16",
-        usersCount: 1,
-    },
+const permissionStatusOptions = [
+    { value: "all", label: "Tous" },
+    { value: "deposit", label: "Dépôt autorisé" },
+    { value: "withdraw", label: "Retrait autorisé" },
 ]
 
-const categoryOptions = [
-    { value: "user-management", label: "User Management" },
-    { value: "permission-management", label: "Permission Management" },
-    { value: "request-management", label: "Request Management" },
-    { value: "reports", label: "Reports" },
-    { value: "content-management", label: "Content Management" },
-    { value: "security", label: "Security" },
-]
+const editPermissionSchema = z.object({
+    can_deposit: z.boolean().default(true),
+    can_withdraw: z.boolean().default(true),
+    daily_deposit_limit: z.number().min(0).optional(),
+    daily_withdrawal_limit: z.number().min(0).optional(),
+})
+
+type EditPermissionInput = z.infer<typeof editPermissionSchema>
 
 export function PermissionsContent() {
     const [searchQuery, setSearchQuery] = useState("")
-    const [selectedCategory, setSelectedCategory] = useState("")
+    const [selectedStatus, setSelectedStatus] = useState("")
+    const [currentPage, setCurrentPage] = useState(1)
     const [panelOpen, setPanelOpen] = useState(false)
     const [selectedPermission, setSelectedPermission] = useState<Permission | null>(null)
-    const [createModalOpen, setCreateModalOpen] = useState(false)
-    const [editMode, setEditMode] = useState(false)
-    const [newPermission, setNewPermission] = useState({
-        name: "",
-        slug: "",
-        description: "",
-        category: "",
+    const [showEditForm, setShowEditForm] = useState(false)
+    const [isProcessing, setIsProcessing] = useState(false)
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
+    const itemsPerPage = 10
+
+    // API hooks
+    const { data: permissionsData, error, isLoading } = usePermission()
+    const updatePermissionMutation = useUpdatePermission()
+    const deletePermissionMutation = useDeletePermission()
+
+    // Form for editing permission
+    const editForm = useForm<EditPermissionInput>({
+        resolver: zodResolver(editPermissionSchema),
+        defaultValues: {
+            can_deposit: true,
+            can_withdraw: true,
+            daily_deposit_limit: undefined,
+            daily_withdrawal_limit: undefined,
+        },
     })
+
+    // Reset form when permission is selected
+    useEffect(() => {
+        if (selectedPermission && !showEditForm) {
+            editForm.reset({
+                can_deposit: selectedPermission.can_deposit,
+                can_withdraw: selectedPermission.can_withdraw,
+                daily_deposit_limit: selectedPermission.daily_deposit_limit ? Number(selectedPermission.daily_deposit_limit) : undefined,
+                daily_withdrawal_limit: selectedPermission.daily_withdrawal_limit ? Number(selectedPermission.daily_withdrawal_limit) : undefined,
+            })
+        }
+    }, [selectedPermission?.id])
+
+    // Handle API errors
+    useEffect(() => {
+        if (error) {
+            toast.error("Échec du chargement des permissions, veuillez réessayer")
+            console.error("Error loading permissions:", error)
+        }
+    }, [error])
 
     // Filter data
-    const filteredData = mockPermissions.filter((item) => {
+    const filteredData = permissionsData?.results.filter((item) => {
         const matchesSearch =
-            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.description.toLowerCase().includes(searchQuery.toLowerCase())
-        const matchesCategory = !selectedCategory || item.category === selectedCategory
+            item.platform_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.platform_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.user.toLowerCase().includes(searchQuery.toLowerCase())
 
-        return matchesSearch && matchesCategory
-    })
+        let matchesStatus = true
+        if (selectedStatus && selectedStatus !== "all") {
+            if (selectedStatus === "deposit") {
+                matchesStatus = item.can_deposit
+            } else if (selectedStatus === "withdraw") {
+                matchesStatus = item.can_withdraw
+            }
+        }
+
+        return matchesSearch && matchesStatus
+    }) || []
+
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage)
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    const paginatedData = filteredData.slice(startIndex, endIndex)
+
+    const getPageNumber = () => {
+        const pages = []
+        const maxVisiblePage = 5
+
+        if (totalPages <= maxVisiblePage) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i)
+            }
+        } else {
+            if (currentPage >= 3) {
+                for (let i = 1; i <= 4; i++) {
+                    pages.push(i)
+                }
+                pages.push("ellipsis")
+                pages.push(totalPages)
+            } else if (currentPage >= totalPages - 2) {
+                pages.push(1)
+                pages.push("ellipsis")
+                for (let i = currentPage - 1; i <= totalPages; i++) {
+                    pages.push(i)
+                }
+            } else {
+                pages.push("ellipsis")
+                for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+                    pages.push(i)
+                }
+                pages.push("ellipsis")
+            }
+        }
+
+        return pages
+    }
 
     const handleClearFilters = () => {
         setSearchQuery("")
-        setSelectedCategory("")
+        setSelectedStatus("")
+        setCurrentPage(1)
     }
 
-    const handleViewPermission = (permission: Permission) => {
+    const handleSelectPermission = (permission: Permission) => {
         setSelectedPermission(permission)
-        setEditMode(false)
+        setShowEditForm(false)
         setPanelOpen(true)
     }
 
-    const handleEditPermission = () => {
-        setEditMode(true)
+    const handleDeletePermission = () => {
+        if (!selectedPermission) return
+        setShowDeleteDialog(true)
     }
 
-    const handleSavePermission = () => {
-        console.log("Permission updated:", selectedPermission)
-        setEditMode(false)
+    const confirmDeletePermission = async () => {
+        if (!selectedPermission) return
+
+        setShowDeleteDialog(false)
+        setIsProcessing(true)
+        try {
+            deletePermissionMutation.mutate(selectedPermission.id, {
+                onSuccess: () => {
+                    toast.success("Permission supprimée avec succès")
+                    setPanelOpen(false)
+                    setSelectedPermission(null)
+                },
+            })
+        } finally {
+            setIsProcessing(false)
+        }
     }
 
-    const handleDeletePermission = (permissionId: string) => {
-        console.log("Delete permission:", permissionId)
-    }
-
-    const handleCreatePermission = () => {
-        setNewPermission({
-            name: "",
-            slug: "",
-            description: "",
-            category: "",
-        })
-        setCreateModalOpen(true)
-    }
-
-    const handleSaveNewPermission = () => {
-        console.log("New permission created:", newPermission)
-        setCreateModalOpen(false)
+    const handleEditPermission = async (data: EditPermissionInput) => {
+        if (!selectedPermission) return
+        setIsProcessing(true)
+        try {
+            updatePermissionMutation.mutate({
+                id: selectedPermission.id,
+                data: {
+                    can_deposit: data.can_deposit,
+                    can_withdraw: data.can_withdraw,
+                    daily_deposit_limit: data.daily_deposit_limit,
+                    daily_withdrawal_limit: data.daily_withdrawal_limit,
+                }
+            }, {
+                onSuccess: () => {
+                    setSelectedPermission({
+                        ...selectedPermission,
+                        can_deposit: data.can_deposit,
+                        can_withdraw: data.can_withdraw,
+                        daily_deposit_limit: data.daily_deposit_limit?.toString() || selectedPermission.daily_deposit_limit,
+                        daily_withdrawal_limit: data.daily_withdrawal_limit?.toString() || selectedPermission.daily_withdrawal_limit,
+                    })
+                    setShowEditForm(false)
+                    editForm.reset()
+                }
+            })
+        } finally {
+            setIsProcessing(false)
+        }
     }
 
     return (
         <DashboardContent>
-            {/* Header */}
-            <div className="mb-6 flex items-center justify-between">
-                <div>
-                    <p className="text-muted-foreground">
+            <div className="flex gap-6 min-h-[500px]">
+                <div className={cn("transition-all duration-300", panelOpen ? "flex-1 lg:max-w-[calc(100%-320px)]" : "flex-1")} style={{minWidth: 0}}>
+                    <div className="mb-6 flex items-center justify-between">
+                        <div>
+                            <p className="text-2xl font-bold">Permissions</p>
+                            <p className="text-sm text-muted-foreground">
+                                Gérer les permissions des utilisateurs
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Filters */}
+                    <div className="mb-6">
+                        <FilterSection
+                            searchValue={searchQuery}
+                            onSearchChange={setSearchQuery}
+                            filters={[
+                                {
+                                    placeholder: "Statut",
+                                    label: "Statut",
+                                    value: selectedStatus,
+                                    options: permissionStatusOptions,
+                                    onChange: (value) => {
+                                        setSelectedStatus(value)
+                                        setCurrentPage(1)
+                                    },
+                                },
+                            ]}
+                            onClearAll={handleClearFilters}
+                        />
+                    </div>
+
+                    <p className="text-muted-foreground mb-2">
                         {filteredData.length} permission{filteredData.length !== 1 ? "s" : ""}
                     </p>
-                </div>
-                <Button onClick={handleCreatePermission} className="gap-2">
-                    <Plus className="w-4 h-4" />
-                    Create Permission
-                </Button>
-            </div>
 
-            {/* Filters */}
-            <div className="mb-6">
-                <FilterSection
-                    searchValue={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    filters={[
-                        {
-                            label: "Category",
-                            value: selectedCategory,
-                            options: categoryOptions,
-                            onChange: (value) => setSelectedCategory(value),
-                        },
-                    ]}
-                    onClearAll={handleClearFilters}
-                />
-            </div>
-
-            {/* Permissions Table */}
-            <div className="mb-6">
-                {filteredData.length > 0 ? (
-                    <div className="border border-border rounded-lg overflow-hidden">
-                        <table className="w-full">
-                            {/* Header */}
-                            <thead className="bg-muted border-b border-border">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Name</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Category</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Description</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Users</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Created</th>
-                                <th className="w-12 px-6 py-3" />
-                            </tr>
-                            </thead>
-
-                            {/* Body */}
-                            <tbody>
-                            {filteredData.map((permission, idx) => (
-                                <tr key={idx} className="border-b border-border hover:bg-muted/50 transition-colors">
-                                    <td className="px-6 py-3">
-                                        <div className="flex flex-col">
-                                            <button
-                                                onClick={() => handleViewPermission(permission)}
-                                                className="text-sm font-medium text-foreground hover:text-accent transition-colors text-left"
-                                            >
-                                                {permission.name}
-                                            </button>
-                                            <span className="text-xs text-muted-foreground font-mono">{permission.slug}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                        <span className="text-sm text-foreground">{permission.category}</span>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                        <span className="text-sm text-muted-foreground line-clamp-1">{permission.description}</span>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                        <span className="text-sm font-medium text-foreground">{permission.usersCount}</span>
-                                    </td>
-                                    <td className="px-6 py-3 text-sm text-muted-foreground">{permission.createdAt}</td>
-                                    <td className="px-6 py-3">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <button className="p-2 hover:bg-muted rounded-lg transition-colors">
-                                                    <MoreHorizontal className="w-4 h-4" />
-                                                </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleViewPermission(permission)}>
-                                                    <Eye className="w-4 h-4 mr-2" />
-                                                    View
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => {
-                                                        handleViewPermission(permission)
-                                                        setEditMode(true)
-                                                    }}
-                                                >
-                                                    <Edit2 className="w-4 h-4 mr-2" />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    className="text-destructive"
-                                                    onClick={() => handleDeletePermission(permission.id)}
-                                                >
-                                                    <Trash2 className="w-4 h-4 mr-2" />
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <div className="flex items-center justify-center py-12 bg-card border border-border rounded-lg">
-                        <p className="text-muted-foreground">No permissions found</p>
-                    </div>
-                )}
-            </div>
-
-            {/* Details Side Panel */}
-            <SidePanel
-                isOpen={panelOpen}
-                onClose={() => setPanelOpen(false)}
-                title={editMode ? "Edit Permission" : "Permission Details"}
-                width="md"
-                footer={
-                    editMode && (
-                        <div className="flex gap-3">
-                            <Button onClick={handleSavePermission} className="flex-1">
-                                Save Changes
-                            </Button>
-                            <Button onClick={() => setEditMode(false)} variant="outline" className="flex-1">
-                                Cancel
-                            </Button>
-                        </div>
-                    )
-                }
-            >
-                {selectedPermission && (
-                    <div className="space-y-6">
-                        {/* Basic Information */}
-                        <div>
-                            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Basic Information</h3>
-                            <div className="space-y-3">
-                                {editMode ? (
-                                    <>
-                                        <div>
-                                            <label className="text-xs text-muted-foreground font-medium">Permission Name</label>
-                                            <input
-                                                type="text"
-                                                value={selectedPermission.name}
-                                                className="w-full mt-1 px-3 py-2 rounded-lg bg-input border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-muted-foreground font-medium">Slug</label>
-                                            <input
-                                                type="text"
-                                                value={selectedPermission.slug}
-                                                className="w-full mt-1 px-3 py-2 rounded-lg bg-input border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring font-mono text-sm"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-muted-foreground font-medium">Description</label>
-                                            <textarea
-                                                value={selectedPermission.description}
-                                                rows={3}
-                                                className="w-full mt-1 px-3 py-2 rounded-lg bg-input border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-muted-foreground font-medium">Category</label>
-                                            <select className="w-full mt-1 px-3 py-2 rounded-lg bg-input border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
-                                                <option value={selectedPermission.category}>{selectedPermission.category}</option>
-                                                {categoryOptions.map((opt) => (
-                                                    <option key={opt.value} value={opt.label}>
-                                                        {opt.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <span className="text-sm text-muted-foreground">Name</span>
-                                                <p className="text-sm font-semibold text-foreground mt-1">{selectedPermission.name}</p>
+                    {/* Cards List */}
+                    <div className="space-y-3 mb-6">
+                        {isLoading ? (
+                            [1, 2, 3, 4].map((i) => (
+                                <RequestCardSkeleton key={i} />
+                            ))
+                        ) : paginatedData.length > 0 ? (
+                            paginatedData.map((permission) => (
+                                <RequestCard
+                                    key={permission.id}
+                                    icon={<Lock className="w-6 h-6" />}
+                                    title={permission.platform_name}
+                                    subtitle={`Utilisateur: ${permission.user}`}
+                                    badge={
+                                        <div className="flex gap-2">
+                                            <div className="flex gap-2">
+                                                <span>Dépot</span>
+                                                <StatusBadge status={permission.can_deposit ? "active" : "inactive"} label="Dépôt" />
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <span>Retrait</span>
+                                                <StatusBadge status={permission.can_withdraw ? "active" : "inactive"} label="Retrait" />
                                             </div>
                                         </div>
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <span className="text-sm text-muted-foreground">Slug</span>
-                                                <p className="text-sm font-mono text-foreground mt-1 bg-muted p-2 rounded">
-                                                    {selectedPermission.slug}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <span className="text-sm text-muted-foreground">Description</span>
-                                            <p className="text-sm text-foreground mt-1">{selectedPermission.description}</p>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-sm text-muted-foreground">Category</span>
-                                            <span className="text-sm font-medium text-foreground">{selectedPermission.category}</span>
-                                        </div>
-                                    </>
-                                )}
+                                    }
+                                    details={[
+                                        { label: "Code plateforme", value: permission.platform_code },
+                                        { label: "Créée le", value: formatDate(permission.created_at) },
+                                    ]}
+                                    onClick={() => handleSelectPermission(permission)}
+                                    isSelected={selectedPermission?.id === permission.id}
+                                />
+                            ))
+                        ) : (
+                            <div className="flex items-center justify-center py-12 bg-card border border-border rounded-lg">
+                                <p className="text-muted-foreground">Aucune permission trouvée</p>
                             </div>
-                        </div>
+                        )}
+                    </div>
 
-                        {/* Assignment Information */}
-                        {!editMode && (
-                            <div className="border-t border-border pt-6">
-                                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Assignment Information</h3>
-                                <div className="space-y-2">
+                    {/* Pagination */}
+                    {paginatedData.length > 0 && (
+                        <div className="flex items-center justify-between mb-4">
+                            <p className="text-muted-foreground mb-2 w-full">
+                                Affichage de {startIndex + 1} à {Math.min(endIndex, permissionsData?.results.length || 0)} sur{" "}
+                                {permissionsData?.results.length} résultat{permissionsData?.results.length || 0 > 1 ? "s" : ""}
+                            </p>
+                            <Pagination>
+                                <PaginationContent>
+                                    <PaginationItem>
+                                        <PaginationPrevious href="#" onClick={(e) => {
+                                            e.preventDefault()
+                                            if (currentPage - 1 > 0) setCurrentPage(currentPage - 1)
+                                        }}
+                                                            className={currentPage === 1 ? "pointer-event-none opacity-50" : "cursor-pointer"}
+                                        />
+                                    </PaginationItem>
+                                    {
+                                        getPageNumber().map((page, index) =>
+                                            page === "ellipsis" ? (
+                                                <PaginationItem key={`ellipsis-${index}`}>
+                                                    <PaginationEllipsis />
+                                                </PaginationItem>
+                                            ) : (
+                                                <PaginationItem key={page}>
+                                                    <PaginationLink href="#" onClick={(e) => {
+                                                        e.preventDefault()
+                                                        setCurrentPage(page as number)
+                                                    }}
+                                                                    isActive={currentPage == page}
+                                                                    className="cursor-pointer"
+                                                    >{page}</PaginationLink>
+                                                </PaginationItem>
+                                            )
+                                        )
+                                    }
+                                    <PaginationItem>
+                                        <PaginationNext href="#" onClick={(e) => {
+                                            e.preventDefault()
+                                            if (totalPages >= currentPage + 1) setCurrentPage(currentPage + 1)
+                                        }}
+                                                        className={currentPage === totalPages ? "pointer-event-none opacity-50" : "cursor-pointer"} />
+                                    </PaginationItem>
+                                </PaginationContent>
+                            </Pagination>
+                        </div>
+                    )}
+                </div>
+
+                {/* Panel Section - Embedded on desktop, hidden on mobile */}
+                <SidePanel
+                    isOpen={panelOpen}
+                    onClose={() => {
+                        setPanelOpen(false)
+                        setSelectedPermission(null)
+                        setShowEditForm(false)
+                    }}
+                    title={showEditForm ? "Modifier la permission" : "Détails de la permission"}
+                    embedded={true}
+                    footer={
+                        showEditForm ? (
+                            <div className="flex gap-3">
+                                <Button type="submit" form="edit-permission-form" className="flex-1" disabled={isProcessing}>
+                                    Enregistrer
+                                </Button>
+                                <Button onClick={() => setShowEditForm(false)} variant="outline" className="flex-1" disabled={isProcessing}>
+                                    Annuler
+                                </Button>
+                            </div>
+                        ) : (
+                            selectedPermission && (
+                                <div className="flex gap-3">
+                                    <Button
+                                        onClick={() => setShowEditForm(true)}
+                                        className="flex-1"
+                                        disabled={isProcessing}
+                                    >
+                                        Modifier
+                                    </Button>
+                                    <Button
+                                        onClick={handleDeletePermission}
+                                        variant="destructive"
+                                        className="flex-1"
+                                        disabled={isProcessing}
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Supprimer
+                                    </Button>
+                                </div>
+                            )
+                        )
+                    }
+                >
+                    {selectedPermission && (
+                        <div className="space-y-6">
+                            {/* Permission Profile */}
+                            <div className="text-center pb-6 border-b border-border">
+                                <div className="w-16 h-16 rounded-full bg-accent text-accent-foreground flex items-center justify-center mx-auto mb-3 text-2xl font-bold">
+                                    <Lock className="w-8 h-8" />
+                                </div>
+                                <h2 className="text-lg font-bold text-foreground">{selectedPermission.platform_name}</h2>
+                                <p className="text-sm text-muted-foreground">{selectedPermission.platform_code}</p>
+                            </div>
+
+                            {/* Permission Information */}
+                            <div>
+                                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Informations générales</h3>
+                                <div className="space-y-3">
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-muted-foreground">Assigned Users</span>
-                                        <span className="text-sm font-bold text-foreground">{selectedPermission.usersCount}</span>
+                                        <span className="text-sm text-muted-foreground">Utilisateur</span>
+                                        <span className="text-sm font-medium text-foreground">{selectedPermission.user}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-muted-foreground">Created</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedPermission.createdAt}</span>
+                                        <span className="text-sm text-muted-foreground">Code plateforme</span>
+                                        <span className="text-sm font-medium text-foreground">{selectedPermission.platform_code}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-muted-foreground">Last Updated</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedPermission.updatedAt}</span>
+                                        <span className="text-sm text-muted-foreground">Créée le</span>
+                                        <span className="text-sm font-medium text-foreground">{formatDate(selectedPermission.created_at)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-muted-foreground">Mise à jour</span>
+                                        <span className="text-sm font-medium text-foreground">{formatDate(selectedPermission.updated_at)}</span>
                                     </div>
                                 </div>
                             </div>
-                        )}
 
-                        {!editMode && (
-                            <Button onClick={handleEditPermission} className="w-full">
-                                Edit Permission
-                            </Button>
-                        )}
-                    </div>
-                )}
-            </SidePanel>
+                            {/* Permission Details */}
+                            {!showEditForm && (
+                                <div className="border-t border-border pt-6">
+                                    <h3 className="text-sm font-semibold text-muted-foreground mb-3">Détails des permissions</h3>
+                                    <div className="space-y-3">
+                                        <div className="p-3 bg-muted rounded-lg">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-sm font-medium text-foreground">Dépôt autorisé</span>
+                                                <StatusBadge status={selectedPermission.can_deposit ? "active" : "inactive"} />
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Limite: {formatCurrency(Number(selectedPermission.daily_deposit_limit))}
+                                            </p>
+                                        </div>
+                                        <div className="p-3 bg-muted rounded-lg">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-sm font-medium text-foreground">Retrait autorisé</span>
+                                                <StatusBadge status={selectedPermission.can_withdraw ? "active" : "inactive"} />
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Limite: {formatCurrency(Number(selectedPermission.daily_withdrawal_limit))}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
-            {/* Create Permission Modal */}
-            <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-                <DialogContent className="max-w-lg">
+                            {/* Edit Permission Form */}
+                            {showEditForm && (
+                                <div className="border-t border-border pt-6">
+                                    <h3 className="text-sm font-semibold text-muted-foreground mb-3">Modifier la permission</h3>
+                                    <Form {...editForm}>
+                                        <form
+                                            id="edit-permission-form"
+                                            onSubmit={editForm.handleSubmit(handleEditPermission)}
+                                            className="space-y-4"
+                                        >
+                                            <FormField
+                                                control={editForm.control}
+                                                name="can_deposit"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex items-center justify-between rounded-lg border border-input p-3">
+                                                        <FormLabel className="text-xs font-medium">Autoriser le dépôt</FormLabel>
+                                                        <FormControl>
+                                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            <FormField
+                                                control={editForm.control}
+                                                name="can_withdraw"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex items-center justify-between rounded-lg border border-input p-3">
+                                                        <FormLabel className="text-xs font-medium">Autoriser le retrait</FormLabel>
+                                                        <FormControl>
+                                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            <FormField
+                                                control={editForm.control}
+                                                name="daily_deposit_limit"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-xs">Limite dépôt/jour (optionnel)</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            <FormField
+                                                control={editForm.control}
+                                                name="daily_withdrawal_limit"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-xs">Limite retrait/jour (optionnel)</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </form>
+                                    </Form>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </SidePanel>
+
+                </div>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Create New Permission</DialogTitle>
+                        <DialogTitle>Supprimer la permission</DialogTitle>
+                        <DialogDescription>
+                            Êtes-vous sûr de vouloir supprimer cette permission ? Cette action ne peut pas être annulée.
+                        </DialogDescription>
                     </DialogHeader>
-
-                    <div className="space-y-4 py-4">
-                        <div>
-                            <label className="text-sm font-medium text-foreground">Permission Name</label>
-                            <input
-                                type="text"
-                                placeholder="e.g., Manage Settings"
-                                value={newPermission.name}
-                                onChange={(e) => setNewPermission({ ...newPermission, name: e.target.value })}
-                                className="w-full mt-2 px-3 py-2 rounded-lg bg-input border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="text-sm font-medium text-foreground">Slug</label>
-                            <input
-                                type="text"
-                                placeholder="e.g., manage_settings"
-                                value={newPermission.slug}
-                                onChange={(e) => setNewPermission({ ...newPermission, slug: e.target.value })}
-                                className="w-full mt-2 px-3 py-2 rounded-lg bg-input border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring font-mono text-sm"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="text-sm font-medium text-foreground">Description</label>
-                            <textarea
-                                placeholder="Describe what this permission allows users to do"
-                                value={newPermission.description}
-                                onChange={(e) =>
-                                    setNewPermission({
-                                        ...newPermission,
-                                        description: e.target.value,
-                                    })
-                                }
-                                rows={3}
-                                className="w-full mt-2 px-3 py-2 rounded-lg bg-input border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="text-sm font-medium text-foreground">Category</label>
-                            <select
-                                value={newPermission.category}
-                                onChange={(e) => setNewPermission({ ...newPermission, category: e.target.value })}
-                                className="w-full mt-2 px-3 py-2 rounded-lg bg-input border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                            >
-                                <option value="">Select a category</option>
-                                {categoryOptions.map((opt) => (
-                                    <option key={opt.value} value={opt.label}>
-                                        {opt.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setCreateModalOpen(false)}>
-                            Cancel
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowDeleteDialog(false)}
+                            disabled={isProcessing}
+                        >
+                            Annuler
                         </Button>
-                        <Button onClick={handleSaveNewPermission}>Create Permission</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmDeletePermission}
+                            disabled={isProcessing}
+                        >
+                            {isProcessing ? "Suppression..." : "Supprimer"}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
