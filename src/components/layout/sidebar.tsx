@@ -49,7 +49,7 @@ const navItems = [
 
     },
     {
-        label: "CashDesks",
+        label: "Caisse",
         labelEn: "CashDesks",
         href: "/cashdesk",
         icon: Wallet

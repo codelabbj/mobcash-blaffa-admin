@@ -4,11 +4,6 @@ import {useAuth} from "@/providers/auth-provider";
 import {useRouter} from "next/navigation";
 
 export default function Home() {
-    const {user } = useAuth()
-    const router = useRouter()
-    if (!user){
-        router.push("/login")
-    }
 
     return (
         <DashboardLayout>

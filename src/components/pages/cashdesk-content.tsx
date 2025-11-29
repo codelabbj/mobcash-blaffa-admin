@@ -50,7 +50,7 @@ import {Skeleton} from "@/components/ui/skeleton";
 const createCashDeskSchema = z.object({
     platform_id: z.string().min(1, "La plateforme est requise"),
     name: z.string().min(1, "Le nom est requis"),
-    cashdeskid: z.string().min(1, "L'ID Cashdesk est requis"),
+    cashdeskid: z.string().min(1, "L'ID Caisse est requis"),
     login: z.string().min(1, "L'identifiant est requis"),
     cashierpass: z.string().min(1, "Le mot de passe est requis"),
     hash: z.string().min(1, "Le hash est requis"),
@@ -198,21 +198,21 @@ export function CashDeskContent() {
                     {/* Header */}
                     <div className="mb-6 flex items-center justify-between">
                         <div className="space-y-2">
-                            <p className="text-2xl font-bold">Caisses (Cashdesks)</p>
+                            <p className="text-2xl font-bold">Caisses</p>
                             <p className="text-sm text-muted-foreground">
-                                Gérer vos Cashdesks et leur statut
+                                Gérer vos caisses et leur statut
                             </p>
                         </div>
                         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
                             <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
                                 <Plus className="w-4 h-4" />
-                                Nouveau Cashdesk
+                                Nouvelle Caisse
                             </Button>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle>Créer un nouveau Cashdesk</DialogTitle>
+                                    <DialogTitle>Créer une nouvelle caisse</DialogTitle>
                                     <DialogDescription>
-                                        Ajouter un nouveau Cashdesk à votre plateforme
+                                        Ajouter une nouvelle caisse à votre plateforme
                                     </DialogDescription>
                                 </DialogHeader>
                                 <Form {...form}>
@@ -260,7 +260,7 @@ export function CashDeskContent() {
                                                     <FormLabel>Nom</FormLabel>
                                                     <FormControl>
                                                         <Input
-                                                            placeholder="Entrez le nom du Cashdesk"
+                                                            placeholder="Entrez le nom de la caisse"
                                                             {...field}
                                                         />
                                                     </FormControl>
@@ -273,10 +273,10 @@ export function CashDeskContent() {
                                             name="cashdeskid"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Cashdesk ID</FormLabel>
+                                                    <FormLabel>ID Caisse</FormLabel>
                                                     <FormControl>
                                                         <Input
-                                                            placeholder="Entrez l'ID Cashdesk"
+                                                            placeholder="Entrez l'ID de la caisse"
                                                             {...field}
                                                         />
                                                     </FormControl>
@@ -328,7 +328,7 @@ export function CashDeskContent() {
                                             )}
                                         />
                                         <Button type="submit" disabled={isProcessing} className="w-full">
-                                            {isProcessing ? "Création en cours..." : "Créer Cashdesk"}
+                                            {isProcessing ? "Création en cours..." : "Créer Caisse"}
                                         </Button>
                                     </form>
                                 </Form>
@@ -339,7 +339,7 @@ export function CashDeskContent() {
                     {/* Search and Filter */}
                     <div className="mb-6 space-y-4">
                         <Input
-                            placeholder="Rechercher par nom ou ID Cashdesk..."
+                            placeholder="Rechercher par nom ou ID Caisse..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="max-w-sm"
@@ -370,7 +370,7 @@ export function CashDeskContent() {
                     </div>
 
                     <p className="text-muted-foreground mb-4">
-                        {filteredCashDesks.length} Cashdesk{filteredCashDesks.length !== 1 ? "s" : ""}
+                        {filteredCashDesks.length} Caisse{filteredCashDesks.length !== 1 ? "s" : ""}
                     </p>
 
                     {/* Grid/List View */}
@@ -406,7 +406,7 @@ export function CashDeskContent() {
                         </div>
                     ) : (
                         <div className="flex items-center justify-center py-12 bg-card border border-border rounded-lg">
-                            <p className="text-muted-foreground">Aucun Cashdesk trouvé</p>
+                            <p className="text-muted-foreground">Aucune caisse trouvée</p>
                         </div>
                     )}
                 </div>
@@ -415,7 +415,7 @@ export function CashDeskContent() {
                 <SidePanel
                     isOpen={panelOpen}
                     onClose={() => setPanelOpen(false)}
-                    title="Détails Cashdesk"
+                    title="Détails Caisse"
                     embedded={true}
                 >
                     {selectedCashDesk && (
@@ -434,7 +434,7 @@ export function CashDeskContent() {
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-sm text-muted-foreground">
-                                            ID Cashdesk
+                                            ID Caisse
                                         </span>
                                         <span className="text-sm font-medium text-foreground">
                                             {selectedCashDesk.cashdeskid}
