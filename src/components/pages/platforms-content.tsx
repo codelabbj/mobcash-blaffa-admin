@@ -1,7 +1,7 @@
 "use client"
 
 import {useEffect, useState} from "react"
-import {Boxes, Plus, Server} from "lucide-react"
+import {Boxes, Plus} from "lucide-react"
 import {cn, formatDate} from "@/lib/utils"
 import {DashboardContent} from "@/components/layout/dashboard-content"
 import {FilterSection} from "@/components/ui/filter-section"

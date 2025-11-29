@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { Menu, LogOut, User } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
