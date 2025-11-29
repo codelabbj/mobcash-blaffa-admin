@@ -13,11 +13,11 @@ interface RechargeCancellationInput {
     recharge_id: string;
     admin_notes: string
 }
-export function useRecharge(){
+export function useRecharge(page:number) {
     return useQuery({
         queryKey:["recharge"],
         queryFn: async () => {
-            const res = await api.get<PaginatedContent<Recharge>>("/admin/recharge-requests/")
+            const res = await api.get<PaginatedContent<Recharge>>(`/admin/recharge-requests?page=${page}`)
             return res.data;
         },
     })

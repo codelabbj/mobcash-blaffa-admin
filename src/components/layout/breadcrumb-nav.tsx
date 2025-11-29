@@ -9,7 +9,7 @@ export function BreadcrumbNav() {
   return (
     <Breadcrumb
       items={breadcrumbs}
-      className="px-6 py-4 border-b border-border bg-card"
+      className="hidden md:block px-6 py-4 border-b border-border bg-card"
     />
   )
 }

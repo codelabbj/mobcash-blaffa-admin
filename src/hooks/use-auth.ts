@@ -1,11 +1,11 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { setAuthTokens, setUserData, clearAuthTokens, } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 import api from "@/lib/api";
 import {LoginResponse} from "@/lib/types";
 import {toast} from "sonner";
+import {useAuth} from "@/providers/auth-provider";
 
 interface LoginPayload {
     email: string
@@ -14,15 +14,14 @@ interface LoginPayload {
 
 export function useLogin() {
     const router = useRouter()
-
+    const {login}= useAuth()
     return useMutation({
         mutationFn: async (data: LoginPayload) => {
             const res = await api.post<LoginResponse>("v1/auth/login/", data)
             return res.data
         },
         onSuccess: (data) => {
-            setAuthTokens({ access: data.tokens.access, refresh: data.tokens.refresh })
-            setUserData(data.user)
+            login(data.tokens.access,data.tokens.refresh,data.user)
             toast.success("Connexion réussie!")
             // Use window.location for full page reload to ensure cookies are available for middleware
             setTimeout(() => {
@@ -37,7 +36,7 @@ export function useLogin() {
 }
 
 export function useLogout() {
-    const router = useRouter()
+    const {logout}= useAuth()
 
     return useMutation({
         mutationFn: async () => {
@@ -45,14 +44,13 @@ export function useLogout() {
             await api.post("/auth/logout")
         },
         onSuccess: () => {
-            clearAuthTokens()
             toast.success("Déconnexion réussie")
-            router.push("/login")
+            logout()
         },
         onError: () => {
             // Even if API call fails, clear tokens locally
-            clearAuthTokens()
-            router.push("/login")
+            toast.success("Déconnexion réussie")
+            logout()
         },
     })
 }

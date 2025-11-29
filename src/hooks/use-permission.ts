@@ -24,7 +24,12 @@ export function useUpdatePermission(){
     const query = useQueryClient()
     return useMutation({
         mutationFn: async ({id,data}:{id:string,data:permissionUpdateInput}) => {
-            const res = await api.patch(`/admin/users/permissions/${id}/`,{data:data})
+            const res = await api.patch(`/admin/users/permissions/${id}/`, {
+                can_deposit: data.can_deposit,
+                can_withdraw: data.can_withdraw,
+                daily_deposit_limit: data.daily_deposit_limit,
+                daily_withdrawal_limit: data.daily_withdrawal_limit,
+            })
             return res.data
         },
         onSuccess: ()=>{

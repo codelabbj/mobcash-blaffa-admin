@@ -23,20 +23,6 @@ import {toast} from "sonner";
 import RequestCardSkeleton from "@/components/ui/request-card-skeleton";
 import Link from "next/link";
 
-interface RechargeRequest {
-    id: string
-    userName: string
-    userPhone: string
-    amount: number
-    platform: string
-    paymentMethod: string
-    status: "pending" | "approved" | "rejected"
-    createdAt: string
-    userEmail?: string
-    transactionId?: string
-    notes?: string
-}
-
 const statusOptions = [
     {value: "all", label: "Tous"},
     { value: "pending", label: "En attente" },
@@ -65,7 +51,7 @@ export function RechargesContent() {
     const itemsPerPage = 6
     const [isProcessing, setIsProcessing] = useState(false)
 
-    const {data:recharges,error, isLoading} = useRecharge()
+    const {data:recharges,error, isLoading} = useRecharge(currentPage)
     const approveRecharge = useApproveRecharge()
     const rejectRecharge = useRejectRecharge()
 
@@ -79,9 +65,9 @@ export function RechargesContent() {
         return matchesSearch && matchesStatus && matchesPlatform
     }) || []
 
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage)
-    const startIndex = (currentPage - 1) * itemsPerPage
-    const endIndex = startIndex + itemsPerPage
+    const totalPages = Math.ceil((recharges?.count || 0) / (recharges?.page_size || itemsPerPage))
+    const startIndex = (currentPage - 1) * (recharges?.page_size || itemsPerPage)
+    const endIndex = startIndex + (recharges?.page_size || itemsPerPage)
     const paginatedData = filteredData.slice(startIndex, endIndex)
 
     const getPageNumber = () =>{
@@ -93,24 +79,26 @@ export function RechargesContent() {
                 pages.push(i)
             }
         }else {
-            if (currentPage >=3){
+            if (currentPage <= 3){
                 for (let i = 1; i <= 4; i++) {
                     pages.push(i)
                 }
                 pages.push("ellipsis")
                 pages.push(totalPages)
-            } else if ( currentPage >= totalPages-2){
+            } else if (currentPage >= totalPages - 2){
                 pages.push(1)
                 pages.push("ellipsis")
-                for (let i = currentPage-1; i <= totalPages; i++) {
+                for (let i = currentPage - 1; i <= totalPages; i++) {
                     pages.push(i)
                 }
             } else {
+                pages.push(1)
                 pages.push("ellipsis")
-                for (let i = currentPage-1; i <= currentPage+1; i++) {
+                for (let i = currentPage - 1; i <= currentPage + 1; i++) {
                     pages.push(i)
                 }
                 pages.push("ellipsis")
+                pages.push(totalPages)
             }
         }
 
@@ -168,8 +156,7 @@ export function RechargesContent() {
             toast.error("Echec du chargement des recharges, veuillez réessayer")
             console.log("An error occurred during recharges loading :",error)
         }
-    })
-
+    }, [error])
     return (
         <DashboardContent>
 
@@ -252,7 +239,7 @@ export function RechargesContent() {
                     </div>
 
                     {/* Pagination */}
-                    {paginatedData.length > 0 && (
+                    {paginatedData.length > 0 && recharges && totalPages > 1 && (
                         <div className="flex items-center justify-between mb-4">
                             <p className="text-muted-foreground mb-2 w-full">
                                 Affichage de {startIndex + 1} à {Math.min(endIndex, recharges?.results.length || 0)} sur{" "}
@@ -263,9 +250,9 @@ export function RechargesContent() {
                                     <PaginationItem>
                                         <PaginationPrevious href="#" onClick={(e)=>{
                                             e.preventDefault()
-                                            if (currentPage-1 > 0) setCurrentPage(currentPage-1)
+                                            if (recharges?.previous) setCurrentPage(currentPage-1)
                                         }}
-                                                            className={currentPage===1 ? "pointer-event-none opacity-50" : "cursor-pointer"}
+                                                            className={currentPage===1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                                         />
                                     </PaginationItem>
                                     {
@@ -289,9 +276,9 @@ export function RechargesContent() {
                                     <PaginationItem>
                                         <PaginationNext href="#" onClick={(e)=>{
                                             e.preventDefault()
-                                            if (totalPages >= currentPage+1) setCurrentPage(currentPage+1)
+                                            if (recharges?.next) setCurrentPage(currentPage+1)
                                         }}
-                                                        className={currentPage=== totalPages ?"pointer-event-none opacity-50" : "cursor-pointer"}/>
+                                                        className={currentPage=== totalPages ?"pointer-events-none opacity-50" : "cursor-pointer"}/>
                                     </PaginationItem>
                                 </PaginationContent>
                             </Pagination>

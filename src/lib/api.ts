@@ -33,9 +33,11 @@ api.interceptors.response.use(
 
                 const res = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/v1/auth/refresh/`, { refresh })
                 const newToken = res.data.access
+                const newRefreshToken = res.data.refresh
 
                 // Update both localStorage and cookies
                 localStorage.setItem("access_token", newToken)
+                localStorage.setItem("refresh_token", newRefreshToken)
                 const isProduction = process.env.NODE_ENV === 'production'
                 const cookieOptions = isProduction
                     ? 'path=/; max-age=604800; secure; samesite=strict'

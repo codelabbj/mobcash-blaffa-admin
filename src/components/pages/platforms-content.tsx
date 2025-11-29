@@ -92,10 +92,10 @@ export function PlatformsContent() {
         return matchesSearch && matchesStatus
     }) || []
 
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage)
-    const startIndex = (currentPage - 1) * itemsPerPage
-    const endIndex = startIndex + itemsPerPage
-    const paginatedData = filteredData.slice(startIndex, endIndex)
+    const totalPages = Math.ceil((platforms?.count || 0) / (platforms?.page_size || itemsPerPage))
+    const startIndex = (currentPage - 1) * (platforms?.page_size || itemsPerPage)
+    const endIndex = startIndex + (platforms?.page_size || itemsPerPage)
+    const paginatedData = filteredData
 
     const getPageNumber = () => {
         const pages = []
@@ -106,7 +106,7 @@ export function PlatformsContent() {
                 pages.push(i)
             }
         } else {
-            if (currentPage >= 3) {
+            if (currentPage <= 3) {
                 for (let i = 1; i <= 4; i++) {
                     pages.push(i)
                 }
@@ -119,11 +119,13 @@ export function PlatformsContent() {
                     pages.push(i)
                 }
             } else {
+                pages.push(1)
                 pages.push("ellipsis")
                 for (let i = currentPage - 1; i <= currentPage + 1; i++) {
                     pages.push(i)
                 }
                 pages.push("ellipsis")
+                pages.push(totalPages)
             }
         }
 
@@ -311,7 +313,7 @@ export function PlatformsContent() {
                     </div>
 
                     {/* Pagination */}
-                    {paginatedData.length > 0 && (
+                    {paginatedData.length > 0 && totalPages > 1 && (
                         <div className="flex items-center justify-between mb-4">
                             <p className="text-muted-foreground mb-2 w-full">
                                 Affichage de {startIndex + 1} à {Math.min(endIndex, platforms?.results.length || 0)} sur{" "}
@@ -324,7 +326,7 @@ export function PlatformsContent() {
                                             e.preventDefault()
                                             if (currentPage - 1 > 0) setCurrentPage(currentPage - 1)
                                         }}
-                                            className={currentPage === 1 ? "pointer-event-none opacity-50" : "cursor-pointer"}
+                                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                                         />
                                     </PaginationItem>
                                     {
@@ -351,7 +353,7 @@ export function PlatformsContent() {
                                             e.preventDefault()
                                             if (totalPages >= currentPage + 1) setCurrentPage(currentPage + 1)
                                         }}
-                                            className={currentPage === totalPages ? "pointer-event-none opacity-50" : "cursor-pointer"}/>
+                                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}/>
                                     </PaginationItem>
                                 </PaginationContent>
                             </Pagination>

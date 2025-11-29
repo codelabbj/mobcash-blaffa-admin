@@ -3,6 +3,7 @@
 import { type ReactNode } from "react"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "./sidebar"
+import { MobileTopbar } from "./mobile-topbar"
 import { BreadcrumbNav } from "./breadcrumb-nav"
 
 interface DashboardLayoutProps {
@@ -14,8 +15,9 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     return (
         <SidebarProvider>
             <AppSidebar />
+            <MobileTopbar />
             {/* Main Content Area */}
-            <div className="flex flex-col flex-1 overflow-hidden bg-background">
+            <div className="flex flex-col flex-1 overflow-hidden bg-background pt-16 md:pt-0">
                 {/* Breadcrumb Navigation */}
                 <BreadcrumbNav />
                 {/* Page Content */}

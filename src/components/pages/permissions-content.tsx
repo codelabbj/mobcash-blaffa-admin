@@ -78,24 +78,12 @@ export function PermissionsContent() {
     const editForm = useForm<EditPermissionInput>({
         resolver: zodResolver(editPermissionSchema),
         defaultValues: {
-            can_deposit: true,
-            can_withdraw: true,
-            daily_deposit_limit: undefined,
-            daily_withdrawal_limit: undefined,
+            can_deposit: selectedPermission?.can_deposit ?? true,
+            can_withdraw: selectedPermission?.can_withdraw ?? true,
+            daily_deposit_limit: selectedPermission?.daily_deposit_limit ? Number(selectedPermission.daily_deposit_limit) : undefined,
+            daily_withdrawal_limit: selectedPermission?.daily_withdrawal_limit ? Number(selectedPermission.daily_withdrawal_limit) : undefined,
         },
     })
-
-    // Reset form when permission is selected
-    useEffect(() => {
-        if (selectedPermission && !showEditForm) {
-            editForm.reset({
-                can_deposit: selectedPermission.can_deposit,
-                can_withdraw: selectedPermission.can_withdraw,
-                daily_deposit_limit: selectedPermission.daily_deposit_limit ? Number(selectedPermission.daily_deposit_limit) : undefined,
-                daily_withdrawal_limit: selectedPermission.daily_withdrawal_limit ? Number(selectedPermission.daily_withdrawal_limit) : undefined,
-            })
-        }
-    }, [selectedPermission?.id])
 
     // Handle API errors
     useEffect(() => {
@@ -124,10 +112,10 @@ export function PermissionsContent() {
         return matchesSearch && matchesStatus
     }) || []
 
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage)
-    const startIndex = (currentPage - 1) * itemsPerPage
-    const endIndex = startIndex + itemsPerPage
-    const paginatedData = filteredData.slice(startIndex, endIndex)
+    const totalPages = Math.ceil((permissionsData?.count || 0) / (permissionsData?.page_size || itemsPerPage))
+    const startIndex = (currentPage - 1) * (permissionsData?.page_size || itemsPerPage)
+    const endIndex = startIndex + (permissionsData?.page_size || itemsPerPage)
+    const paginatedData = filteredData
 
     const getPageNumber = () => {
         const pages = []
@@ -138,7 +126,7 @@ export function PermissionsContent() {
                 pages.push(i)
             }
         } else {
-            if (currentPage >= 3) {
+            if (currentPage <= 3) {
                 for (let i = 1; i <= 4; i++) {
                     pages.push(i)
                 }
@@ -151,11 +139,13 @@ export function PermissionsContent() {
                     pages.push(i)
                 }
             } else {
+                pages.push(1)
                 pages.push("ellipsis")
                 for (let i = currentPage - 1; i <= currentPage + 1; i++) {
                     pages.push(i)
                 }
                 pages.push("ellipsis")
+                pages.push(totalPages)
             }
         }
 
@@ -279,14 +269,14 @@ export function PermissionsContent() {
                                     title={permission.platform_name}
                                     subtitle={`Utilisateur: ${permission.user}`}
                                     badge={
-                                        <div className="flex gap-2">
-                                            <div className="flex gap-2">
-                                                <span>Dépot</span>
-                                                <StatusBadge status={permission.can_deposit ? "active" : "inactive"} label="Dépôt" />
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2 px-2.5 py-1 bg-muted rounded-md">
+                                                <span className="text-xs text-muted-foreground font-medium">Dépôt</span>
+                                                <StatusBadge status={permission.can_deposit ? "active" : "inactive"} />
                                             </div>
-                                            <div className="flex gap-2">
-                                                <span>Retrait</span>
-                                                <StatusBadge status={permission.can_withdraw ? "active" : "inactive"} label="Retrait" />
+                                            <div className="flex items-center gap-2 px-2.5 py-1 bg-muted rounded-md">
+                                                <span className="text-xs text-muted-foreground font-medium">Retrait</span>
+                                                <StatusBadge status={permission.can_withdraw ? "active" : "inactive"} />
                                             </div>
                                         </div>
                                     }
@@ -306,7 +296,7 @@ export function PermissionsContent() {
                     </div>
 
                     {/* Pagination */}
-                    {paginatedData.length > 0 && (
+                    {paginatedData.length > 0 && totalPages > 1 && (
                         <div className="flex items-center justify-between mb-4">
                             <p className="text-muted-foreground mb-2 w-full">
                                 Affichage de {startIndex + 1} à {Math.min(endIndex, permissionsData?.results.length || 0)} sur{" "}
@@ -319,7 +309,7 @@ export function PermissionsContent() {
                                             e.preventDefault()
                                             if (currentPage - 1 > 0) setCurrentPage(currentPage - 1)
                                         }}
-                                                            className={currentPage === 1 ? "pointer-event-none opacity-50" : "cursor-pointer"}
+                                                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                                         />
                                     </PaginationItem>
                                     {
@@ -346,7 +336,7 @@ export function PermissionsContent() {
                                             e.preventDefault()
                                             if (totalPages >= currentPage + 1) setCurrentPage(currentPage + 1)
                                         }}
-                                                        className={currentPage === totalPages ? "pointer-event-none opacity-50" : "cursor-pointer"} />
+                                                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"} />
                                     </PaginationItem>
                                 </PaginationContent>
                             </Pagination>
