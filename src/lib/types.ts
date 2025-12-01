@@ -187,3 +187,159 @@ export interface  Permission {
     created_at:             Date;
     updated_at:             Date;
 }
+
+export interface Commission {
+    id:                      string;
+    user_email:              string;
+    transaction_id:          string;
+    commission_type:         string;
+    commission_type_display: string;
+    transaction_amount:      string;
+    commission_rate:         string;
+    commission_amount:       string;
+    status:                  string;
+    status_display:          string;
+    period_year:             number;
+    period_month:            number;
+    period:                  string;
+    paid_at:                 Date|null;
+    payment_reference:       string|null;
+    notes:                   string;
+    created_at:              Date;
+    updated_at:              Date;
+}
+
+export interface CommissionConfig {
+    id:                         string;
+    user_email:                 string;
+    deposit_commission_rate:    string;
+    withdrawal_commission_rate: string;
+    is_active:                  boolean;
+    created_at:                 Date;
+    updated_at:                 Date;
+}
+
+export interface Stats{
+    overview:          Overview;
+    transactions:      Transactions;
+    recharge_requests: RechargeRequests;
+    discrepancies:     Discrepancies;
+}
+
+export interface Discrepancies {
+    unresolved: number;
+    critical:   number;
+}
+
+export interface Overview {
+    total_users:          number;
+    active_users:         number;
+    total_cashdesks:      number;
+    active_cashdesks:     number;
+    total_wallet_balance: number;
+}
+
+export interface RechargeRequests {
+    pending:        number;
+    approved_today: number;
+}
+
+export interface Transactions {
+    total:        number;
+    today:        number;
+    last_30_days: number;
+    by_status:    ByStatus;
+    total_amount: number;
+}
+
+export interface ByStatus {
+    completed: number;
+    pending:   number;
+    failed:    number;
+    cancelled: number;
+}
+
+export interface TransactionStats {
+    period:             Period;
+    total_transactions: number;
+    by_type:            ByType;
+    by_status:          ByStatus;
+    amounts:            Amounts;
+    by_platform:        Platform[];
+    success_rate:       SuccessRate;
+}
+
+export interface Amounts {
+    total:             number;
+    average:           number;
+    deposits_total:    number;
+    withdrawals_total: number;
+}
+
+export interface ByStatus {
+    completed: number;
+    pending:   number;
+    failed:    number;
+    cancelled: number;
+}
+
+export interface ByType {
+    deposits:    number;
+    withdrawals: number;
+}
+
+export interface Period {
+    start_date: Date;
+    end_date:   Date;
+}
+
+export interface SuccessRate {
+    overall:     number;
+    deposits:    number;
+    withdrawals: number;
+}
+
+export interface CashDeskStats {
+    total_cashdesks:       number;
+    active_cashdesks:      number;
+    inactive_cashdesks:    number;
+    cashdesks_with_issues: number;
+    cashdesks_detail:      CashdesksDetail[];
+}
+
+export interface CashdesksDetail {
+    id:                     string;
+    name:                   string;
+    cashdeskid:             string;
+    platform__name:         string;
+    is_active:              boolean;
+    consecutive_failures:   number;
+    transactions_count:     number;
+    completed_transactions: number;
+    failed_transactions:    number;
+    total_amount:           number|null;
+}
+
+export interface UserStats {
+    total_users:               number;
+    active_users:              number;
+    verified_users:            number;
+    top_users_by_transactions: TopUsersBy[];
+    top_users_by_amount:       TopUsersBy[];
+    wallet_distribution:       WalletDistribution;
+}
+
+export interface TopUsersBy {
+    id:            string;
+    email:         string;
+    first_name:    string;
+    last_name:     string;
+    total_amount?: number;
+    txn_count?:    number;
+}
+
+export interface WalletDistribution {
+    total_balance:        number;
+    average_balance:      number;
+    wallets_with_balance: number;
+}

@@ -3,13 +3,19 @@
 import { useMutation } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import api from "@/lib/api";
-import {LoginResponse} from "@/lib/types";
+import {LoginResponse, User} from "@/lib/types";
 import {toast} from "sonner";
 import {useAuth} from "@/providers/auth-provider";
 
 interface LoginPayload {
     email: string
     password: string
+}
+
+interface ProfileUpdatePayload {
+    first_name: string
+    last_name: string
+    phone_number: string
 }
 
 export function useLogin() {
@@ -52,5 +58,23 @@ export function useLogout() {
             toast.success("Déconnexion réussie")
             logout()
         },
+    })
+}
+
+export function useUpdateProfile() {
+    const {updateUser}= useAuth()
+    return useMutation({
+        mutationFn: async (data : ProfileUpdatePayload) => {
+            const res = await api.patch<User>("/v1/auth/profile/",data)
+            return res.data
+        },
+        onSuccess: (data) => {
+            updateUser(data)
+            toast.success("Profile mis à jour avec succès")
+        },
+        onError: (error) => {
+            toast.error("Echec de la mis à jour du profile, veuillez réessayer")
+            console.error("Error updating user profile:", error)
+        }
     })
 }

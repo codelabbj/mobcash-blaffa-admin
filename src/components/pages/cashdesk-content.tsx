@@ -273,7 +273,7 @@ export function CashDeskContent() {
                                             name="cashdeskid"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>ID Caisse</FormLabel>
+                                                    <FormLabel>ID Workspace</FormLabel>
                                                     <FormControl>
                                                         <Input
                                                             placeholder="Entrez l'ID de la caisse"

@@ -63,7 +63,7 @@ export function PermissionsContent() {
     const [currentPage, setCurrentPage] = useState(1)
     const [panelOpen, setPanelOpen] = useState(false)
     const [selectedPermission, setSelectedPermission] = useState<Permission | null>(null)
-    const [showEditForm, setShowEditForm] = useState(false)
+    const [showEditDialog, setShowEditDialog] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
@@ -160,7 +160,6 @@ export function PermissionsContent() {
 
     const handleSelectPermission = (permission: Permission) => {
         setSelectedPermission(permission)
-        setShowEditForm(false)
         setPanelOpen(true)
     }
 
@@ -208,7 +207,7 @@ export function PermissionsContent() {
                         daily_deposit_limit: data.daily_deposit_limit?.toString() || selectedPermission.daily_deposit_limit,
                         daily_withdrawal_limit: data.daily_withdrawal_limit?.toString() || selectedPermission.daily_withdrawal_limit,
                     })
-                    setShowEditForm(false)
+                    setShowEditDialog(false)
                     editForm.reset()
                 }
             })
@@ -350,41 +349,38 @@ export function PermissionsContent() {
                     onClose={() => {
                         setPanelOpen(false)
                         setSelectedPermission(null)
-                        setShowEditForm(false)
                     }}
-                    title={showEditForm ? "Modifier la permission" : "Détails de la permission"}
+                    title="Détails de la permission"
                     embedded={true}
                     footer={
-                        showEditForm ? (
+                        selectedPermission && (
                             <div className="flex gap-3">
-                                <Button type="submit" form="edit-permission-form" className="flex-1" disabled={isProcessing}>
-                                    Enregistrer
+                                <Button
+                                    onClick={() =>{
+                                        if (!selectedPermission) return
+                                        editForm.reset({
+                                            can_deposit: selectedPermission.can_deposit,
+                                            can_withdraw: selectedPermission.can_withdraw ,
+                                            daily_deposit_limit: Number(selectedPermission.daily_deposit_limit),
+                                            daily_withdrawal_limit: Number(selectedPermission.daily_withdrawal_limit),
+                                        })
+                                        setShowEditDialog(true)}
+                                    }
+                                    className="flex-1"
+                                    disabled={isProcessing}
+                                >
+                                    Modifier
                                 </Button>
-                                <Button onClick={() => setShowEditForm(false)} variant="outline" className="flex-1" disabled={isProcessing}>
-                                    Annuler
+                                <Button
+                                    onClick={handleDeletePermission}
+                                    variant="destructive"
+                                    className="flex-1"
+                                    disabled={isProcessing}
+                                >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Supprimer
                                 </Button>
                             </div>
-                        ) : (
-                            selectedPermission && (
-                                <div className="flex gap-3">
-                                    <Button
-                                        onClick={() => setShowEditForm(true)}
-                                        className="flex-1"
-                                        disabled={isProcessing}
-                                    >
-                                        Modifier
-                                    </Button>
-                                    <Button
-                                        onClick={handleDeletePermission}
-                                        variant="destructive"
-                                        className="flex-1"
-                                        disabled={isProcessing}
-                                    >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        Supprimer
-                                    </Button>
-                                </div>
-                            )
                         )
                     }
                 >
@@ -423,104 +419,125 @@ export function PermissionsContent() {
                             </div>
 
                             {/* Permission Details */}
-                            {!showEditForm && (
-                                <div className="border-t border-border pt-6">
-                                    <h3 className="text-sm font-semibold text-muted-foreground mb-3">Détails des permissions</h3>
-                                    <div className="space-y-3">
-                                        <div className="p-3 bg-muted rounded-lg">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <span className="text-sm font-medium text-foreground">Dépôt autorisé</span>
-                                                <StatusBadge status={selectedPermission.can_deposit ? "active" : "inactive"} />
-                                            </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                Limite: {formatCurrency(Number(selectedPermission.daily_deposit_limit))}
-                                            </p>
+                            <div className="border-t border-border pt-6">
+                                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Détails des permissions</h3>
+                                <div className="space-y-3">
+                                    <div className="p-3 bg-muted rounded-lg">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-sm font-medium text-foreground">Dépôt autorisé</span>
+                                            <StatusBadge status={selectedPermission.can_deposit ? "active" : "inactive"} />
                                         </div>
-                                        <div className="p-3 bg-muted rounded-lg">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <span className="text-sm font-medium text-foreground">Retrait autorisé</span>
-                                                <StatusBadge status={selectedPermission.can_withdraw ? "active" : "inactive"} />
-                                            </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                Limite: {formatCurrency(Number(selectedPermission.daily_withdrawal_limit))}
-                                            </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Limite: {formatCurrency(Number(selectedPermission.daily_deposit_limit))}
+                                        </p>
+                                    </div>
+                                    <div className="p-3 bg-muted rounded-lg">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-sm font-medium text-foreground">Retrait autorisé</span>
+                                            <StatusBadge status={selectedPermission.can_withdraw ? "active" : "inactive"} />
                                         </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Limite: {formatCurrency(Number(selectedPermission.daily_withdrawal_limit))}
+                                        </p>
                                     </div>
                                 </div>
-                            )}
-
-                            {/* Edit Permission Form */}
-                            {showEditForm && (
-                                <div className="border-t border-border pt-6">
-                                    <h3 className="text-sm font-semibold text-muted-foreground mb-3">Modifier la permission</h3>
-                                    <Form {...editForm}>
-                                        <form
-                                            id="edit-permission-form"
-                                            onSubmit={editForm.handleSubmit(handleEditPermission)}
-                                            className="space-y-4"
-                                        >
-                                            <FormField
-                                                control={editForm.control}
-                                                name="can_deposit"
-                                                render={({ field }) => (
-                                                    <FormItem className="flex items-center justify-between rounded-lg border border-input p-3">
-                                                        <FormLabel className="text-xs font-medium">Autoriser le dépôt</FormLabel>
-                                                        <FormControl>
-                                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                                        </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
-
-                                            <FormField
-                                                control={editForm.control}
-                                                name="can_withdraw"
-                                                render={({ field }) => (
-                                                    <FormItem className="flex items-center justify-between rounded-lg border border-input p-3">
-                                                        <FormLabel className="text-xs font-medium">Autoriser le retrait</FormLabel>
-                                                        <FormControl>
-                                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                                        </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
-
-                                            <FormField
-                                                control={editForm.control}
-                                                name="daily_deposit_limit"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel className="text-xs">Limite dépôt/jour (optionnel)</FormLabel>
-                                                        <FormControl>
-                                                            <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)} />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-
-                                            <FormField
-                                                control={editForm.control}
-                                                name="daily_withdrawal_limit"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel className="text-xs">Limite retrait/jour (optionnel)</FormLabel>
-                                                        <FormControl>
-                                                            <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)} />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </form>
-                                    </Form>
-                                </div>
-                            )}
+                            </div>
                         </div>
                     )}
                 </SidePanel>
 
                 </div>
+
+            {/* Edit Permission Dialog */}
+            <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Modifier la permission</DialogTitle>
+                        <DialogDescription>
+                            Mettez à jour les permissions pour {selectedPermission?.platform_name}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedPermission && (
+                        <Form {...editForm}>
+                            <form
+                                id="edit-permission-form"
+                                onSubmit={editForm.handleSubmit(handleEditPermission)}
+                                className="space-y-4"
+                            >
+                                <FormField
+                                    control={editForm.control}
+                                    name="can_deposit"
+                                    render={({ field }) => (
+                                        <FormItem className="flex items-center justify-between rounded-lg border border-input p-3">
+                                            <FormLabel className="text-xs font-medium">Autoriser le dépôt</FormLabel>
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={editForm.control}
+                                    name="can_withdraw"
+                                    render={({ field }) => (
+                                        <FormItem className="flex items-center justify-between rounded-lg border border-input p-3">
+                                            <FormLabel className="text-xs font-medium">Autoriser le retrait</FormLabel>
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={editForm.control}
+                                    name="daily_deposit_limit"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs">Limite dépôt/jour (optionnel)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={editForm.control}
+                                    name="daily_withdrawal_limit"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs">Limite retrait/jour (optionnel)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="0" {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </form>
+                        </Form>
+                    )}
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowEditDialog(false)}
+                            disabled={isProcessing}
+                        >
+                            Annuler
+                        </Button>
+                        <Button
+                            type="submit"
+                            form="edit-permission-form"
+                            disabled={isProcessing}
+                        >
+                            {isProcessing ? "Enregistrement..." : "Enregistrer"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

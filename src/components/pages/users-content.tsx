@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button"
 import {
     useUsers, useUserWallet, useUserTransactions, useUserPermissions, useActiveUser, useDeactivateUser,
 } from "@/hooks/use-users"
+import { useCommission, usePayCommission } from "@/hooks/use-commission"
 import { AppUser } from "@/lib/types"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -96,6 +97,8 @@ export function UsersContent() {
     const walletQuery = useUserWallet(selectedUser?.id || "")
     const transactionsQuery = useUserTransactions(selectedUser?.id || "")
     const permissionsQuery = useUserPermissions(selectedUser?.id || "")
+    const commissionsQuery = useCommission({ user_id: selectedUser?.id, type: "PENDING" })
+    const payCommissionMutation = usePayCommission()
 
     // Load user data when a user is selected
     useEffect(() => {
@@ -233,6 +236,21 @@ export function UsersContent() {
         } catch (error) {
             console.error("Error adding permission:", error)
             toast.error("Erreur lors de l'ajout de la permission")
+        } finally {
+            setIsProcessing(false)
+        }
+    }
+
+    const handlePayCommission = async () => {
+        if (!selectedUser) return
+        setIsProcessing(true)
+        try {
+            payCommissionMutation.mutate({
+                user_id: selectedUser.id,
+                period_year: null,
+                period_month: null,
+                notes: ""
+            })
         } finally {
             setIsProcessing(false)
         }
@@ -496,6 +514,46 @@ export function UsersContent() {
                                     </div>
                                 ) : (
                                     <p className="text-sm text-muted-foreground">Aucune transaction trouvée</p>
+                                )}
+                            </div>
+
+                            {/* Commissions */}
+                            <div className="border-t border-border pt-6">
+                                <h3 className="text-sm font-semibold text-muted-foreground mb-3">
+                                    Commissions en attente ({commissionsQuery?.data?.results.length || 0})
+                                </h3>
+                                {commissionsQuery?.isLoading ? (
+                                    <div className="space-y-3">
+                                        {[1, 2].map((i) => (
+                                            <Skeleton key={i} className="h-5 w-full" />
+                                        ))}
+                                    </div>
+                                ) : commissionsQuery?.data && commissionsQuery.data.results.length > 0 ? (
+                                    <>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                                            {commissionsQuery.data.results.slice(0, 5).map((commission) => (
+                                                <div key={commission.id} className="flex justify-between items-center p-2 bg-muted rounded">
+                                                    <div className="flex-1">
+                                                        <p className="text-xs font-medium text-foreground">{commission.id}</p>
+                                                        <p className="text-xs text-muted-foreground">{commission.status_display}</p>
+                                                    </div>
+                                                    <span className="text-sm font-medium text-foreground">
+                                                        {formatCurrency(Number(commission.commission_amount))}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {commissionsQuery.data.results.length > 5 && (
+                                            <p className="text-xs text-muted-foreground text-center mb-4">
+                                                +{commissionsQuery.data.results.length - 5} de plus
+                                            </p>
+                                        )}
+                                        <Button onClick={handlePayCommission} className="w-full" disabled={isProcessing || commissionsQuery.isPending}>
+                                            {isProcessing ? "Paiement en cours..." : "Payer la commission"}
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">Aucune commission en attente</p>
                                 )}
                             </div>
 

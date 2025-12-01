@@ -111,12 +111,6 @@ export default function LoginPage() {
                                         </FormItem>
                                     )}
                                 />
-
-                                <div className="flex items-center justify-end">
-                                    <Link href="/forgot-password" className="text-sm font-semibold text-primary hover:underline transition-colors">
-                                        Mot de passe oublié?
-                                    </Link>
-                                </div>
                             </div>
 
                             <Button
