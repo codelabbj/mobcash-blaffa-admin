@@ -22,6 +22,8 @@ import {Recharge} from "@/lib/types";
 import {toast} from "sonner";
 import RequestCardSkeleton from "@/components/ui/request-card-skeleton";
 import Link from "next/link";
+import {Input} from "@/components/ui/input";
+import {Button} from "@/components/ui/button";
 
 const statusOptions = [
     {value: "all", label: "Tous"},
@@ -39,7 +41,7 @@ const paymentMethodOptions = [
 
 export function RechargesContent() {
     const [searchQuery, setSearchQuery] = useState("")
-    const [selectedStatus, setSelectedStatus] = useState("")
+    const [selectedStatus, setSelectedStatus] = useState("all")
     const [selectedPlatform, setSelectedPlatform] = useState("")
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("")
     const [currentPage, setCurrentPage] = useState(1)
@@ -51,24 +53,14 @@ export function RechargesContent() {
     const itemsPerPage = 6
     const [isProcessing, setIsProcessing] = useState(false)
 
-    const {data:recharges,error, isLoading} = useRecharge(currentPage)
+    const {data:recharges,error, isLoading} = useRecharge({page:currentPage,status:selectedStatus})
     const approveRecharge = useApproveRecharge()
     const rejectRecharge = useRejectRecharge()
-
-    // Filter data
-    const filteredData = recharges?.results.filter((item) => {
-        const matchesSearch =
-            item.user_email.toLowerCase().includes(searchQuery.toLowerCase()) || item.payment_reference.includes(searchQuery)
-        const matchesStatus = !selectedStatus || selectedStatus ==="all" || item.status.toLowerCase() === selectedStatus
-        const matchesPlatform = !selectedPaymentMethod || selectedPaymentMethod ==="all" || item.payment_method.toLowerCase() === selectedPaymentMethod
-
-        return matchesSearch && matchesStatus && matchesPlatform
-    }) || []
 
     const totalPages = Math.ceil((recharges?.count || 0) / (recharges?.page_size || itemsPerPage))
     const startIndex = (currentPage - 1) * (recharges?.page_size || itemsPerPage)
     const endIndex = startIndex + (recharges?.page_size || itemsPerPage)
-    const paginatedData = filteredData.slice(startIndex, endIndex)
+    const paginatedData = recharges?.results || []
 
     const getPageNumber = () =>{
         const pages = []
@@ -171,39 +163,29 @@ export function RechargesContent() {
                         <p className="text-sm text-muted-foreground">Gérer vos demandes de recharge d&#39;application de paris</p>
                     </div>
 
-                    {/* Filters */}
-                    <div className={cn("mb-6 transition-all duration-300", panelOpen && "lg:max-w-[calc(100%-320px)]")}>
-                        <FilterSection
-                            searchValue={searchQuery}
-                            onSearchChange={setSearchQuery}
-                            filters={[
-                                {
-                                    placeholder:"Status",
-                                    label: "Statut",
-                                    value: selectedStatus,
-                                    options: statusOptions,
-                                    onChange: (value) => {
-                                        setSelectedStatus(value)
-                                        setCurrentPage(1)
-                                    },
-                                },
-                                {
-                                    placeholder: "Methode de paiement",
-                                    label: "Methode de paiement",
-                                    value: selectedPlatform,
-                                    options: paymentMethodOptions,
-                                    onChange: (value) => {
-                                        setSelectedPlatform(value)
-                                        setCurrentPage(1)
-                                    },
-                                },
-                            ]}
-                            onClearAll={handleClearFilters}
-                        />
+                    {/* Search and Filter */}
+                    <div className="mb-6 space-y-4">
+                        <div className="flex gap-2 flex-wrap">
+                            {
+                                statusOptions.map((option) => (
+                                    <Button
+                                        variant={selectedStatus === option.value ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={()=> {
+                                            console.log(option.value)
+                                            setSelectedStatus(option.value)
+                                        }}
+                                        key={option.value}
+                                    >
+                                        {option.label}
+                                    </Button>
+                                ))
+                            }
+                        </div>
                     </div>
 
                     <p className="text-muted-foreground mb-2">
-                        {filteredData.length} demande{filteredData.length !== 1 ? "s" : ""} de recharge
+                        {recharges?.results.length} demande{recharges?.results.length !== 1 ? "s" : ""} de recharge
                     </p>
 
                     {/* Cards List */}

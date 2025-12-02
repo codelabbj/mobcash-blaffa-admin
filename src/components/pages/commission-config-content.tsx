@@ -163,16 +163,6 @@ export default function CommissionConfigContent() {
                         <p className="text-sm text-muted-foreground">Gérer les taux de commission pour les utilisateurs</p>
                     </div>
 
-                    {/* Filters */}
-                    <div className={cn("mb-6 transition-all duration-300", panelOpen && "lg:max-w-[calc(100%-320px)]")}>
-                        <FilterSection
-                            searchValue={searchQuery}
-                            onSearchChange={setSearchQuery}
-                            filters={[]}
-                            onClearAll={handleClearFilters}
-                        />
-                    </div>
-
                     <p className="text-muted-foreground mb-2">
                         {filteredData.length} configuration{filteredData.length !== 1 ? "s" : ""}
                     </p>

@@ -71,14 +71,25 @@ export function UsersContent() {
     const [selectedUser, setSelectedUser] = useState<AppUser | null>(null)
     const [showAddPermissionForm, setShowAddPermissionForm] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
-
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
     const itemsPerPage = 10
 
+    useEffect(() => {
+        const debouncer = setTimeout(
+            ()=>{
+                setDebouncedSearchQuery(searchQuery)
+                setCurrentPage(1)
+            },500
+        )
+
+        return ()=>clearTimeout(debouncer)
+    }, [searchQuery]);
+
     // API hooks - Always call hooks at the top level (required by React Rules of Hooks)
-    const { data: users, error, isLoading } = useUsers()
+    const { data: users, error, isLoading } = useUsers({page:currentPage,search:debouncedSearchQuery,is_active:selectedStatus})
     const activeUserMutation = useActiveUser()
     const deactivateUserMutation = useDeactivateUser()
-    const { data: platformsData, isLoading: loadingPlatforms, error: platformError } = usePlatform()
+    const { data: platformsData, isLoading: loadingPlatforms, error: platformError } = usePlatform({})
     const addPermissionMutation = useAddUserPermission()
 
     // Form for adding permission
@@ -130,22 +141,10 @@ export function UsersContent() {
         }
     }, [platformError])
 
-    // Filter data
-    const filteredData = users?.results.filter((item) => {
-        const matchesSearch =
-            item.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.phone_number.includes(searchQuery)
-        const matchesStatus = !selectedStatus || selectedStatus === "all" || String(item.is_active) === selectedStatus
-
-        return matchesSearch && matchesStatus
-    }) || []
-
     const totalPages = Math.ceil((users?.count || 0) / (users?.page_size || itemsPerPage))
     const startIndex = (currentPage - 1) * (users?.page_size || itemsPerPage)
     const endIndex = startIndex + (users?.page_size || itemsPerPage)
-    const paginatedData = filteredData
+    const paginatedData = users?.results || []
 
     const getPageNumber = () => {
         const pages = []
@@ -299,7 +298,7 @@ export function UsersContent() {
                     </div>
 
                     <p className="text-muted-foreground mb-2">
-                        {filteredData.length} utilisateur{filteredData.length !== 1 ? "s" : ""}
+                        {users?.results.length} utilisateur{users?.results.length !== 1 ? "s" : ""}
                     </p>
 
                     {/* Cards List */}

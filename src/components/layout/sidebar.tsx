@@ -174,7 +174,7 @@ export function AppSidebar() {
                     "flex flex-col items-start text-sm transition-opacity duration-300",
                     state === "collapsed" ? "opacity-0 w-0" : "opacity-100"
                   )}>
-                    <span className="font-semibold text-sidebar-foreground">{user?.first_name||""+" "+user?.last_name||""}</span>
+                    <span className="font-semibold text-sidebar-foreground">{(user?.first_name||"")+" "+(user?.last_name||"")}</span>
                     <span className="text-sidebar-foreground/60 text-xs">{user?.email||"N/A"}</span>
                   </div>
                 </SidebarMenuButton>

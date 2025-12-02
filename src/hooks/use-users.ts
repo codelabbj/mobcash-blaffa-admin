@@ -17,11 +17,21 @@ export interface userPermissionInput {
     daily_withdrawal_limit?: number;
 }
 
-export function useUsers(){
+interface Filters {
+    page?:number,
+    search?:string,
+    is_active?:string,
+}
+
+export function useUsers(data:Filters){
     return useQuery({
-        queryKey:["users"],
+        queryKey:["users",data.page,data.search,data.is_active],
         queryFn: async ()=>{
-            const res = await api.get<PaginatedContent<AppUser>>("/admin/users/")
+            const query : Record<string, number|string|boolean> = {}
+            if (data.page) query.page = data.page;
+            if (data.search && data.search!=="") query.search = data.search;
+            if (data.is_active && data.is_active!=="all") query.is_active = data.is_active==="true";
+            const res = await api.get<PaginatedContent<AppUser>>("/admin/users/",{params:query})
             return res.data;
         }
     })

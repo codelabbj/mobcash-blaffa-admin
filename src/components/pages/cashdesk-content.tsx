@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import {Plus, Wallet} from "lucide-react"
+import {Plus, Wallet, Check, ChevronsUpDown} from "lucide-react"
 import { cn, formatDate } from "@/lib/utils"
 import { DashboardContent } from "@/components/layout/dashboard-content"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,30 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import {
+    Pagination,
+    PaginationContent, PaginationEllipsis,
+    PaginationItem, PaginationLink,
+    PaginationNext,
+    PaginationPrevious
+} from "@/components/ui/pagination"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { toast } from "sonner"
+import {
     Form,
     FormControl,
     FormField,
@@ -25,10 +49,6 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { toast } from "sonner"
 import { CashDesk } from "@/lib/types"
 import {
     useCashDesk,
@@ -36,13 +56,6 @@ import {
     useUpdateCashDeskStatus,
     useUpdateCashDeskCredentials,
 } from "@/hooks/use-cashdesk"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
 import {usePlatform} from "@/hooks/use-platform";
 import {Skeleton} from "@/components/ui/skeleton";
 
@@ -67,39 +80,85 @@ type UpdateCredentialsInput = z.infer<typeof updateCredentialsSchema>
 
 export function CashDeskContent() {
     const [searchQuery, setSearchQuery] = useState("")
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
     const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all")
+    const [currentPage, setCurrentPage] = useState(1)
     const [panelOpen, setPanelOpen] = useState(false)
     const [selectedCashDesk, setSelectedCashDesk] = useState<CashDesk | null>(null)
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
     const [updateCredentialsDialogOpen, setUpdateCredentialsDialogOpen] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
+    const [platformSearch, setPlatformSearch] = useState("")
+    const [platformComboOpen, setPlatformComboOpen] = useState(false)
+    const [selectedPlatformId, setSelectedPlatformId] = useState("")
 
-    const { data: cashDesks, isLoading, error } = useCashDesk()
+    const itemsPerPage = 6
+
+    // Debounce search query for cashdesk
+    useEffect(() => {
+        const debounceTimer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery)
+            setCurrentPage(1)
+        }, 500)
+
+        return () => clearTimeout(debounceTimer)
+    }, [searchQuery])
+
+    // Debounce search query for platforms
+    const [debouncedPlatformSearch, setDebouncedPlatformSearch] = useState("")
+    useEffect(() => {
+        const debounceTimer = setTimeout(() => {
+            setDebouncedPlatformSearch(platformSearch)
+        }, 300)
+
+        return () => clearTimeout(debounceTimer)
+    }, [platformSearch])
+
+    const { data: cashDesks, isLoading, error } = useCashDesk({
+        page: currentPage,
+        search: debouncedSearchQuery,
+        is_active: filterActive
+    })
     const createCashDesk = useCreateCashDesk()
     const updateStatus = useUpdateCashDeskStatus()
     const updateCredentials = useUpdateCashDeskCredentials()
-    const {data:platforms, isLoading:loadingPlatforms, error:platformError} = usePlatform()
+    const {data:platforms, isLoading:loadingPlatforms, error:platformError} = usePlatform({
+        search: debouncedPlatformSearch
+    })
 
-    const form = useForm<CreateCashDeskInput>({
-        resolver: zodResolver(createCashDeskSchema),
+    const [formData, setFormData] = useState<CreateCashDeskInput>({
+        platform_id: "",
+        name: "",
+        cashdeskid: "",
+        login: "",
+        cashierpass: "",
+        hash: "",
+    })
+    const [formErrors, setFormErrors] = useState<Partial<Record<keyof CreateCashDeskInput, string>>>({})
+
+    const credentialsForm = useForm<UpdateCredentialsInput>({
+        resolver: zodResolver(updateCredentialsSchema),
         defaultValues: {
-            platform_id: "",
-            name: "",
-            cashdeskid: "",
             login: "",
             cashierpass: "",
             hash: "",
         },
     })
 
-    const credentialsForm = useForm<UpdateCredentialsInput>({
-        resolver: zodResolver(updateCredentialsSchema),
-        defaultValues: {
-            login: selectedCashDesk?.cashdeskid || "",
-            cashierpass: "",
-            hash: "",
-        },
-    })
+    const validateForm = (data: CreateCashDeskInput) => {
+        const result = createCashDeskSchema.safeParse(data)
+        if (!result.success) {
+            const errors: Partial<Record<keyof CreateCashDeskInput, string>> = {}
+            result.error.errors.forEach((error) => {
+                const path = error.path[0] as keyof CreateCashDeskInput
+                errors[path] = error.message
+            })
+            setFormErrors(errors)
+            return false
+        }
+        setFormErrors({})
+        return true
+    }
 
     // Filter cashdesks
     const filteredCashDesks = cashDesks?.results.filter((desk) => {
@@ -113,18 +172,12 @@ export function CashDeskContent() {
         return matchesSearch && matchesFilter
     }) || []
 
-    const handleCreateCashDesk = async (data: CreateCashDeskInput) => {
-        setIsProcessing(true)
-        try {
-            createCashDesk.mutate(data, {
-                onSuccess: () => {
-                    form.reset()
-                    setCreateDialogOpen(false)
-                },
-            })
-        } finally {
-            setIsProcessing(false)
-        }
+    const handleCreateCashDesk = (data: CreateCashDeskInput) => {
+        createCashDesk.mutate(data, {
+            onSuccess: () => {
+                setCreateDialogOpen(false)
+            },
+        })
     }
 
     const handleSelectCashDesk = (desk: CashDesk) => {
@@ -149,25 +202,20 @@ export function CashDeskContent() {
         }
     }
 
-    const handleUpdateCredentials = async (data: UpdateCredentialsInput) => {
+    const handleUpdateCredentials = (data: UpdateCredentialsInput) => {
         if (!selectedCashDesk) return
-        setIsProcessing(true)
-        try {
-            updateCredentials.mutate(
-                {
-                    id: selectedCashDesk.id,
-                    data,
+        updateCredentials.mutate(
+            {
+                id: selectedCashDesk.id,
+                data,
+            },
+            {
+                onSuccess: () => {
+                    credentialsForm.reset()
+                    setUpdateCredentialsDialogOpen(false)
                 },
-                {
-                    onSuccess: () => {
-                        credentialsForm.reset()
-                        setUpdateCredentialsDialogOpen(false)
-                    },
-                }
-            )
-        } finally {
-            setIsProcessing(false)
-        }
+            }
+        )
     }
 
     useEffect(() => {
@@ -215,123 +263,181 @@ export function CashDeskContent() {
                                         Ajouter une nouvelle caisse à votre plateforme
                                     </DialogDescription>
                                 </DialogHeader>
-                                <Form {...form}>
-                                    <form
-                                        onSubmit={form.handleSubmit(handleCreateCashDesk)}
-                                        className="space-y-4"
-                                    >
-                                        <FormField
-                                            control={form.control}
-                                            name="platform_id"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Plateforme</FormLabel>
-                                                    <FormControl>
-                                                        <Select value={field.value} onValueChange={field.onChange}>
-                                                            <SelectTrigger id="platform" className="w-full">
-                                                                <SelectValue placeholder="Sélectionner une plateforme"/>
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {
-                                                                    loadingPlatforms ? (
-                                                                        <SelectItem value="">
-                                                                            <Skeleton className="w-full h-5"/>
-                                                                        </SelectItem>): platforms ?
-                                                                        platforms.results.map(pl=>(
-                                                                            <SelectItem key={pl.id} value={pl.id}>
-                                                                                {pl.name}
-                                                                            </SelectItem>
-                                                                        )):(
-                                                                            <SelectItem value="">Aucune plateforme disponible</SelectItem>
-                                                                        )
-                                                                }
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
+                                <form
+                                    onSubmit={(e) => {
+                                        e.preventDefault()
+                                        if (validateForm(formData)) {
+                                            handleCreateCashDesk(formData)
+                                            setFormData({
+                                                platform_id: "",
+                                                name: "",
+                                                cashdeskid: "",
+                                                login: "",
+                                                cashierpass: "",
+                                                hash: "",
+                                            })
+                                        }
+                                    }}
+                                    className="space-y-4"
+                                >
+                                    {/* Platform Selection */}
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">Plateforme</label>
+                                        <Popover open={platformComboOpen} onOpenChange={(open) => {
+                                            if (open) {
+                                                setPlatformComboOpen(true)
+                                            } else {
+                                                setPlatformComboOpen(false)
+                                                setPlatformSearch("")
+                                            }
+                                        }}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    className={cn(
+                                                        "w-full justify-between",
+                                                        !formData.platform_id && "text-muted-foreground"
+                                                    )}
+                                                    aria-expanded={platformComboOpen}
+                                                    type="button"
+                                                >
+                                                    {formData.platform_id
+                                                        ? platforms?.results.find(
+                                                            (platform) => platform.id === formData.platform_id
+                                                        )?.name
+                                                        : "Rechercher plateforme..."}
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[400px] p-0 z-[100]" align="start" sideOffset={8} onOpenAutoFocus={(e) => e.preventDefault()} onInteractOutside={(e) => {
+                                                const target = e.target as HTMLElement
+                                                if (!target.closest('[cmdk-item]') && !target.closest('[cmdk-input]')) {
+                                                    setPlatformComboOpen(false)
+                                                }
+                                            }}>
+                                                <Command shouldFilter={false}>
+                                                    <CommandInput
+                                                        placeholder="Rechercher plateforme..."
+                                                        value={platformSearch}
+                                                        onValueChange={setPlatformSearch}
+                                                        autoFocus
+                                                    />
+                                                    <CommandList>
+                                                        <CommandEmpty>Aucune plateforme trouvée</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {loadingPlatforms ? (
+                                                                <div className="py-6 px-2 text-center text-sm">
+                                                                    Chargement...
+                                                                </div>
+                                                            ) : (
+                                                                platforms?.results.map((platform) => (
+                                                                    <CommandItem
+                                                                        value={platform.id}
+                                                                        key={platform.id}
+                                                                        onSelect={() => {
+                                                                            setFormData({...formData, platform_id: platform.id})
+                                                                            setPlatformComboOpen(false)
+                                                                            setPlatformSearch("")
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                formData.platform_id === platform.id
+                                                                                    ? "opacity-100"
+                                                                                    : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {platform.name}
+                                                                    </CommandItem>
+                                                                ))
+                                                            )}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+                                        {formErrors.platform_id && (
+                                            <p className="text-sm text-destructive">{formErrors.platform_id}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Nom */}
+                                    <div className="space-y-2">
+                                        <label htmlFor="name" className="text-sm font-medium">Nom</label>
+                                        <Input
+                                            id="name"
+                                            placeholder="Entrez le nom de la caisse"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({...formData, name: e.target.value})}
                                         />
-                                        <FormField
-                                            control={form.control}
-                                            name="name"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Nom</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            placeholder="Entrez le nom de la caisse"
-                                                            {...field}
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
+                                        {formErrors.name && (
+                                            <p className="text-sm text-destructive">{formErrors.name}</p>
+                                        )}
+                                    </div>
+
+                                    {/* ID Workspace */}
+                                    <div className="space-y-2">
+                                        <label htmlFor="cashdeskid" className="text-sm font-medium">ID Workspace</label>
+                                        <Input
+                                            id="cashdeskid"
+                                            placeholder="Entrez l'ID de la caisse"
+                                            value={formData.cashdeskid}
+                                            onChange={(e) => setFormData({...formData, cashdeskid: e.target.value})}
                                         />
-                                        <FormField
-                                            control={form.control}
-                                            name="cashdeskid"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>ID Workspace</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            placeholder="Entrez l'ID de la caisse"
-                                                            {...field}
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
+                                        {formErrors.cashdeskid && (
+                                            <p className="text-sm text-destructive">{formErrors.cashdeskid}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Identifiant */}
+                                    <div className="space-y-2">
+                                        <label htmlFor="login" className="text-sm font-medium">Identifiant</label>
+                                        <Input
+                                            id="login"
+                                            placeholder="Entrez l'identifiant"
+                                            value={formData.login}
+                                            onChange={(e) => setFormData({...formData, login: e.target.value})}
                                         />
-                                        <FormField
-                                            control={form.control}
-                                            name="login"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Identifiant</FormLabel>
-                                                    <FormControl>
-                                                        <Input placeholder="Entrez l'identifiant" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
+                                        {formErrors.login && (
+                                            <p className="text-sm text-destructive">{formErrors.login}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Mot de passe */}
+                                    <div className="space-y-2">
+                                        <label htmlFor="cashierpass" className="text-sm font-medium">Mot de passe</label>
+                                        <Input
+                                            id="cashierpass"
+                                            type="password"
+                                            placeholder="Entrez le mot de passe"
+                                            value={formData.cashierpass}
+                                            onChange={(e) => setFormData({...formData, cashierpass: e.target.value})}
                                         />
-                                        <FormField
-                                            control={form.control}
-                                            name="cashierpass"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Mot de passe</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            type="password"
-                                                            placeholder="Entrez le mot de passe"
-                                                            {...field}
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
+                                        {formErrors.cashierpass && (
+                                            <p className="text-sm text-destructive">{formErrors.cashierpass}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Hash */}
+                                    <div className="space-y-2">
+                                        <label htmlFor="hash" className="text-sm font-medium">Hash</label>
+                                        <Input
+                                            id="hash"
+                                            placeholder="Entrez le hash"
+                                            value={formData.hash}
+                                            onChange={(e) => setFormData({...formData, hash: e.target.value})}
                                         />
-                                        <FormField
-                                            control={form.control}
-                                            name="hash"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Hash</FormLabel>
-                                                    <FormControl>
-                                                        <Input placeholder="Entrez le hash" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <Button type="submit" disabled={isProcessing} className="w-full">
-                                            {isProcessing ? "Création en cours..." : "Créer Caisse"}
-                                        </Button>
-                                    </form>
-                                </Form>
+                                        {formErrors.hash && (
+                                            <p className="text-sm text-destructive">{formErrors.hash}</p>
+                                        )}
+                                    </div>
+
+                                    <Button type="submit" disabled={isProcessing} className="w-full">
+                                        {isProcessing ? "Création en cours..." : "Créer Caisse"}
+                                    </Button>
+                                </form>
                             </DialogContent>
                         </Dialog>
                     </div>
@@ -373,7 +479,7 @@ export function CashDeskContent() {
                         {filteredCashDesks.length} Caisse{filteredCashDesks.length !== 1 ? "s" : ""}
                     </p>
 
-                    {/* Grid/List View */}
+    {/* Grid/List View */}
                     {isLoading ? (
                         <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
                             {[1, 2, 3, 4].map((i) => (
@@ -381,29 +487,63 @@ export function CashDeskContent() {
                             ))}
                         </div>
                     ) : filteredCashDesks.length > 0 ? (
-                        <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
-                            {filteredCashDesks.map((desk) => (
-                                <RequestCard
-                                    key={desk.id}
-                                    icon={<Wallet className="w-6 h-6" />}
-                                    title={desk.name}
-                                    subtitle={desk.cashdeskid}
-                                    badge={
-                                        <StatusBadge
-                                            status={
-                                                desk.is_active ? "active" : "inactive"
-                                            }
-                                        />
-                                    }
-                                    details={[
-                                        { label: "Plateforme", value: desk.platform.name },
-                                        { label: "Statut", value: desk.health_status ==="healthy" ? "Sain" : "Maintenance requise" },
-                                    ]}
-                                    onClick={() => handleSelectCashDesk(desk)}
-                                    isSelected={selectedCashDesk?.id === desk.id}
-                                />
-                            ))}
-                        </div>
+                        <>
+                            <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 mb-6">
+                                {filteredCashDesks.map((desk) => (
+                                    <RequestCard
+                                        key={desk.id}
+                                        icon={<Wallet className="w-6 h-6" />}
+                                        title={desk.name}
+                                        subtitle={desk.cashdeskid}
+                                        badge={
+                                            <StatusBadge
+                                                status={
+                                                    desk.is_active ? "active" : "inactive"
+                                                }
+                                            />
+                                        }
+                                        details={[
+                                            { label: "Plateforme", value: desk.platform.name },
+                                            { label: "Statut", value: desk.health_status ==="healthy" ? "Sain" : "Maintenance requise" },
+                                        ]}
+                                        onClick={() => handleSelectCashDesk(desk)}
+                                        isSelected={selectedCashDesk?.id === desk.id}
+                                    />
+                                ))}
+                            </div>
+
+                            {/* Pagination */}
+                            {cashDesks && cashDesks.results.length > 0 && (
+                                <div className="flex items-center justify-between">
+                                    <p className="text-muted-foreground text-sm">
+                                        Affichage de {(currentPage - 1) * itemsPerPage + 1} à {Math.min(currentPage * itemsPerPage, cashDesks?.count || 0)} sur{" "}
+                                        {cashDesks?.count || 0} résultat{cashDesks?.count !== 1 ? "s" : ""}
+                                    </p>
+                                    <Pagination>
+                                        <PaginationContent>
+                                            <PaginationItem>
+                                                <PaginationPrevious href="#" onClick={(e) => {
+                                                    e.preventDefault()
+                                                    if (cashDesks?.previous) setCurrentPage(currentPage - 1)
+                                                }}
+                                                    className={!cashDesks?.previous ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                                />
+                                            </PaginationItem>
+                                            <PaginationItem>
+                                                <span className="px-3 py-2 text-sm">{currentPage}</span>
+                                            </PaginationItem>
+                                            <PaginationItem>
+                                                <PaginationNext href="#" onClick={(e) => {
+                                                    e.preventDefault()
+                                                    if (cashDesks?.next) setCurrentPage(currentPage + 1)
+                                                }}
+                                                    className={!cashDesks?.next ? "pointer-events-none opacity-50" : "cursor-pointer"}/>
+                                            </PaginationItem>
+                                        </PaginationContent>
+                                    </Pagination>
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <div className="flex items-center justify-center py-12 bg-card border border-border rounded-lg">
                             <p className="text-muted-foreground">Aucune caisse trouvée</p>

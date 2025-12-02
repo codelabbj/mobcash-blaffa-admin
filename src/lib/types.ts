@@ -177,6 +177,7 @@ export interface Wallet {
 export interface  Permission {
     id:                     string;
     user:                   string;
+    user_display_name:  string;
     platform:               string;
     platform_name:          string;
     platform_code:          string;

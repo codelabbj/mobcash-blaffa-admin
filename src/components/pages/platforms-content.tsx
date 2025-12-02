@@ -59,6 +59,7 @@ export function PlatformsContent() {
     const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null)
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
     const [editMode, setEditMode] = useState(false)
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
 
     const itemsPerPage = 6
     const [isProcessing, setIsProcessing] = useState(false)
@@ -77,25 +78,25 @@ export function PlatformsContent() {
         is_active: true,
     })
 
-    const {data: platforms, error, isLoading} = usePlatform()
+    useEffect(() => {
+        const debouncer = setTimeout(
+            ()=>{
+                setDebouncedSearchQuery(searchQuery)
+                setCurrentPage(1)
+            },500
+        )
+        return ()=>clearTimeout(debouncer)
+    }, [searchQuery]);
+
+    const {data: platforms, error, isLoading} = usePlatform({page:currentPage,is_active:selectedStatus,search:debouncedSearchQuery})
     const createPlatform = useCreatePlatform()
     const updatePlatform = useUpdatePlatform()
     const loadStats = usePlatformStats()
 
-    // Filter data
-    const filteredData = platforms?.results.filter((item) => {
-        const matchesSearch =
-            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.code.toLowerCase().includes(searchQuery.toLowerCase())
-        const matchesStatus = !selectedStatus || selectedStatus === "all" || String(item.is_active) === selectedStatus
-
-        return matchesSearch && matchesStatus
-    }) || []
-
     const totalPages = Math.ceil((platforms?.count || 0) / (platforms?.page_size || itemsPerPage))
     const startIndex = (currentPage - 1) * (platforms?.page_size || itemsPerPage)
     const endIndex = startIndex + (platforms?.page_size || itemsPerPage)
-    const paginatedData = filteredData
+    const paginatedData = platforms?.results || []
 
     const getPageNumber = () => {
         const pages = []
@@ -280,7 +281,7 @@ export function PlatformsContent() {
                     </div>
 
                     <p className="text-muted-foreground mb-2">
-                        {filteredData.length} plateforme{filteredData.length !== 1 ? "s" : ""}
+                        {platforms?.results.length} plateforme{platforms?.results.length !== 1 ? "s" : ""}
                     </p>
 
                     {/* Cards List */}

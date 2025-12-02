@@ -10,11 +10,22 @@ interface permissionUpdateInput {
     daily_withdrawal_limit?: number;
 }
 
-export function usePermission(){
+interface Filters{
+    page?:number,
+    status?: string
+}
+
+export function usePermission(data:Filters){
     return useQuery({
-        queryKey:["permissions"],
+        queryKey:["permissions",data.page, data.status],
         queryFn: async () => {
-            const res = await api.get<PaginatedContent<Permission>>("/admin/users/permissions/")
+            const query : Record<string, string|number|boolean>= {}
+            if (data.page) query.page = data.page;
+            if (data.status && data.status !== "all") {
+                if (data.status === "deposit") query.can_deposit = true;
+                if (data.status === "withdraw") query.can_withdraw = true;
+            };
+            const res = await api.get<PaginatedContent<Permission>>("/admin/users/permissions/",{params:query})
             return res.data
         }
     })

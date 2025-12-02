@@ -42,7 +42,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 
-const permissionStatusOptions = [
+const statusOptions = [
     { value: "all", label: "Tous" },
     { value: "deposit", label: "Dépôt autorisé" },
     { value: "withdraw", label: "Retrait autorisé" },
@@ -58,7 +58,6 @@ const editPermissionSchema = z.object({
 type EditPermissionInput = z.infer<typeof editPermissionSchema>
 
 export function PermissionsContent() {
-    const [searchQuery, setSearchQuery] = useState("")
     const [selectedStatus, setSelectedStatus] = useState("")
     const [currentPage, setCurrentPage] = useState(1)
     const [panelOpen, setPanelOpen] = useState(false)
@@ -70,7 +69,7 @@ export function PermissionsContent() {
     const itemsPerPage = 10
 
     // API hooks
-    const { data: permissionsData, error, isLoading } = usePermission()
+    const { data: permissionsData, error, isLoading } = usePermission({page:currentPage,status:selectedStatus})
     const updatePermissionMutation = useUpdatePermission()
     const deletePermissionMutation = useDeletePermission()
 
@@ -93,29 +92,10 @@ export function PermissionsContent() {
         }
     }, [error])
 
-    // Filter data
-    const filteredData = permissionsData?.results.filter((item) => {
-        const matchesSearch =
-            item.platform_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.platform_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.user.toLowerCase().includes(searchQuery.toLowerCase())
-
-        let matchesStatus = true
-        if (selectedStatus && selectedStatus !== "all") {
-            if (selectedStatus === "deposit") {
-                matchesStatus = item.can_deposit
-            } else if (selectedStatus === "withdraw") {
-                matchesStatus = item.can_withdraw
-            }
-        }
-
-        return matchesSearch && matchesStatus
-    }) || []
-
     const totalPages = Math.ceil((permissionsData?.count || 0) / (permissionsData?.page_size || itemsPerPage))
     const startIndex = (currentPage - 1) * (permissionsData?.page_size || itemsPerPage)
     const endIndex = startIndex + (permissionsData?.page_size || itemsPerPage)
-    const paginatedData = filteredData
+    const paginatedData = permissionsData?.results || []
 
     const getPageNumber = () => {
         const pages = []
@@ -153,7 +133,6 @@ export function PermissionsContent() {
     }
 
     const handleClearFilters = () => {
-        setSearchQuery("")
         setSelectedStatus("")
         setCurrentPage(1)
     }
@@ -230,28 +209,28 @@ export function PermissionsContent() {
                     </div>
 
                     {/* Filters */}
-                    <div className="mb-6">
-                        <FilterSection
-                            searchValue={searchQuery}
-                            onSearchChange={setSearchQuery}
-                            filters={[
-                                {
-                                    placeholder: "Statut",
-                                    label: "Statut",
-                                    value: selectedStatus,
-                                    options: permissionStatusOptions,
-                                    onChange: (value) => {
-                                        setSelectedStatus(value)
-                                        setCurrentPage(1)
-                                    },
-                                },
-                            ]}
-                            onClearAll={handleClearFilters}
-                        />
+                    <div className="mb-6 space-y-4">
+                        <div className="flex gap-2 flex-wrap">
+                            {
+                                statusOptions.map((option) => (
+                                    <Button
+                                        variant={selectedStatus === option.value ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={()=> {
+                                            console.log(option.value)
+                                            setSelectedStatus(option.value)
+                                        }}
+                                        key={option.value}
+                                    >
+                                        {option.label}
+                                    </Button>
+                                ))
+                            }
+                        </div>
                     </div>
 
                     <p className="text-muted-foreground mb-2">
-                        {filteredData.length} permission{filteredData.length !== 1 ? "s" : ""}
+                        {permissionsData?.results.length} permission{permissionsData?.results.length !== 1 ? "s" : ""}
                     </p>
 
                     {/* Cards List */}
@@ -266,7 +245,7 @@ export function PermissionsContent() {
                                     key={permission.id}
                                     icon={<Lock className="w-6 h-6" />}
                                     title={permission.platform_name}
-                                    subtitle={`Utilisateur: ${permission.user}`}
+                                    subtitle={`Utilisateur: ${permission.user_display_name}`}
                                     badge={
                                         <div className="flex items-center gap-3">
                                             <div className="flex items-center gap-2 px-2.5 py-1 bg-muted rounded-md">
@@ -401,7 +380,7 @@ export function PermissionsContent() {
                                 <div className="space-y-3">
                                     <div className="flex justify-between">
                                         <span className="text-sm text-muted-foreground">Utilisateur</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedPermission.user}</span>
+                                        <span className="text-sm font-medium text-foreground">{selectedPermission.user_display_name}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-sm text-muted-foreground">Code plateforme</span>

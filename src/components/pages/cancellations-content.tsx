@@ -32,6 +32,7 @@ const statusOptions = [
 
 export function CancellationsContent() {
     const [searchQuery, setSearchQuery] = useState("")
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
     const [selectedStatus, setSelectedStatus] = useState("")
     const [currentPage, setCurrentPage] = useState(1)
     const [panelOpen, setPanelOpen] = useState(false)
@@ -44,24 +45,25 @@ export function CancellationsContent() {
     const [isProcessing, setIsProcessing] = useState(false)
     const [isLoadingTransaction, setIsLoadingTransaction] = useState(false)
 
-    const {data: cancellations, error, isLoading} = useCancellation(currentPage)
+    // Debounce search query
+    useEffect(() => {
+        const debounceTimer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery)
+            setCurrentPage(1)
+        }, 500) // 500ms delay
+
+        return () => clearTimeout(debounceTimer)
+    }, [searchQuery])
+
+    const {data: cancellations, error, isLoading} = useCancellation({page:currentPage,status:selectedStatus,search:debouncedSearchQuery})
     const approveCancellation = useApproveCancellation()
     const rejectCancellation = useRejectCancellation()
     const loadTransaction = useTransaction()
 
-    // Filter data
-    const filteredData = cancellations?.results.filter((item) => {
-        const matchesSearch =
-            item.transaction_id.toLowerCase().includes(searchQuery.toLowerCase()) || item.id.includes(searchQuery)
-        const matchesStatus = !selectedStatus || selectedStatus === "all" || item.status.toLowerCase() === selectedStatus
-
-        return matchesSearch && matchesStatus
-    }) || []
-
     const totalPages = Math.ceil((cancellations?.count || 0) / (cancellations?.page_size || itemsPerPage))
     const startIndex = (currentPage - 1) * (cancellations?.page_size || itemsPerPage)
     const endIndex = startIndex + (cancellations?.page_size || itemsPerPage)
-    const paginatedData = filteredData
+    const paginatedData = cancellations?.results || []
 
     const getPageNumber = () => {
         const pages = []
@@ -196,7 +198,7 @@ export function CancellationsContent() {
                     </div>
 
                     <p className="text-muted-foreground mb-2">
-                        {filteredData.length} demande{filteredData.length !== 1 ? "s" : ""} d&#39;annulation
+                        {cancellations?.results.length} demande{cancellations?.results.length !== 1 ? "s" : ""} d&#39;annulation
                     </p>
 
                     {/* Cards List */}

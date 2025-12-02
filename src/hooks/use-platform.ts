@@ -15,11 +15,21 @@ interface PlatformUpdateInput {
     is_active: boolean
 }
 
-export function usePlatform(){
+interface Filters {
+    page? : number,
+    search? : string,
+    is_active ?: string,
+}
+
+export function usePlatform(data: Filters){
     return useQuery({
-        queryKey:["platform"],
+        queryKey:["platform",data.page, data.search, data.is_active],
         queryFn: async () =>{
-            const res = await api.get<PaginatedContent<Platform>>("/v1/platforms/")
+            const query : Record<string, number|string| boolean> = {}
+            if (data.page) query.page = data.page;
+            if (data.search && data.search !== "") query.search = data.search;
+            if (data.is_active && data.is_active !== "all") query.is_active = data.is_active === "true";
+            const res = await api.get<PaginatedContent<Platform>>("/v1/platforms/",{params:query})
             return res.data
         }
     })

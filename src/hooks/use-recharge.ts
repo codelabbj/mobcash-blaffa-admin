@@ -13,11 +13,20 @@ interface RechargeCancellationInput {
     recharge_id: string;
     admin_notes: string
 }
-export function useRecharge(page:number) {
+
+interface Filters {
+    page?: number;
+    status?: string
+}
+
+export function useRecharge(data:Filters) {
     return useQuery({
-        queryKey:["recharge"],
+        queryKey:["recharge",data.page,data.status],
         queryFn: async () => {
-            const res = await api.get<PaginatedContent<Recharge>>(`/admin/recharge-requests?page=${page}`)
+            const query : Record<string, string|number> = {}
+            if (data.page) query.page = data.page;
+            if (data.status && data.status !== "all") query.status = data.status.toUpperCase();
+            const res = await api.get<PaginatedContent<Recharge>>(`/admin/recharge-requests`,{params:query})
             return res.data;
         },
     })

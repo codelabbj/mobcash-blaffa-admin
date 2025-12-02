@@ -13,11 +13,21 @@ interface CancellationRejectionInput {
     admin_notes: string
 }
 
-export function useCancellation(page:number) {
+interface Filters {
+    page: number;
+    search: string;
+    status: string;
+}
+
+export function useCancellation(data:Filters) {
     return useQuery({
-        queryKey:["cancellation"],
+        queryKey:["cancellation", data.page,data.search,data.status],
         queryFn: async () => {
-            const res = await api.get<PaginatedContent<Cancellation>>(`/admin/cancellation-requests?page=${page}`)
+            const query: Record<string, string|number> = {}
+            if (data.page) query.page = data.page;
+            if (data.status && data.status!=="all") query.status = data.status.toUpperCase();
+            if (data.search && data.search !== "") query.search = data.search;
+            const res = await api.get<PaginatedContent<Cancellation>>(`/admin/cancellation-requests`,{params:query})
             return res.data
         }
     })
