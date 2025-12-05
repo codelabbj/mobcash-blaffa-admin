@@ -1,6 +1,6 @@
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import api from "@/lib/api";
-import {AppUser, PaginatedContent, Permission, Transaction} from "@/lib/types";
+import {AppUser, Commission, CommissionStats, PaginatedContent, Permission, Transaction} from "@/lib/types";
 import {toast} from "sonner";
 import {error} from "next/dist/build/output/log";
 
@@ -104,7 +104,25 @@ export function useUserWallet(id: string){
     })
 }
 
-export function useUserTransactions(id: string){
+export function useUserTransactions(id: string, page?: number){
+    // If page is provided, use useQuery for automatic pagination
+    if (page !== undefined) {
+        return useQuery({
+            queryKey:["user-transactions", id, page],
+            queryFn: async ()=>{
+                const res = await api.get<PaginatedContent<Transaction>>(`/admin/users/${id}/transactions/`, {
+                    params: { page }
+                })
+                return res.data;
+            },
+            onError:()=>{
+                toast.error("Echec du chargement des transactions utilisateur")
+                console.error("Error loading user transactions:",error)
+            }
+        })
+    }
+
+    // Otherwise, use useMutation for manual fetching
     return useMutation({
         mutationFn: async ()=>{
             const res = await api.get<PaginatedContent<Transaction>>(`/admin/users/${id}/transactions/`)
@@ -114,7 +132,7 @@ export function useUserTransactions(id: string){
             toast.error("Echec du chargement des transactions utilisateur")
             console.error("Error loading user transactions:",error)
         }
-    })
+    }) as any
 }
 
 export function useUserPermissions(id: string){
@@ -127,6 +145,19 @@ export function useUserPermissions(id: string){
         onError:()=>{
             toast.error("Echec du chargement des permissions utilisateur")
             console.error("Error loading user permissions:",error)
+        }
+    })
+}
+
+export function useUserCommissions(id: string){
+    return useMutation({
+        mutationFn: async ()=>{
+            const res = await api.get<CommissionStats>(`/admin/users/${id}/commission_summary`)
+            return res.data;
+        },
+        onError:()=>{
+            toast.error("Echec du chargement des commissions utilisateur")
+            console.error("Error loading user commissions:",error)
         }
     })
 }

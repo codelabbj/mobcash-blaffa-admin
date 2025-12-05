@@ -344,3 +344,12 @@ export interface WalletDistribution {
     average_balance:      number;
     wallets_with_balance: number;
 }
+
+export interface CommissionStats {
+    pending_total: string;
+    pending_count: number;
+    paid_total:    string;
+    paid_count:    number;
+    payable_total: string;
+    payable_count: number;
+}

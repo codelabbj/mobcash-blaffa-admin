@@ -1,6 +1,6 @@
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import api from "@/lib/api";
-import {Commission, PaginatedContent} from "@/lib/types";
+import {Commission, CommissionStats, PaginatedContent} from "@/lib/types";
 import {toast} from "sonner";
 
 interface CommissionFilter {
@@ -17,11 +17,14 @@ interface PayCommissionInput {
 }
 
 export function useCommission(filter:CommissionFilter){
-    return useQuery({
-        queryKey:["commission"],
-        queryFn: async () =>{
+    return useMutation({
+        mutationFn: async () =>{
             const res = await api.get<PaginatedContent<Commission>>("/admin/commissions/",{params:filter})
             return res.data;
+        },
+        onError:(error)=>{
+            toast.error("Une erreur est survenue lors du chargement des commissions")
+            console.error("Error loading commissions:",error)
         }
     })
 }

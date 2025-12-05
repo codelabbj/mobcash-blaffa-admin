@@ -18,9 +18,10 @@ import {
 import { Button } from "@/components/ui/button"
 import {
     useUsers, useUserWallet, useUserTransactions, useUserPermissions, useActiveUser, useDeactivateUser,
+    useUserCommissions,
 } from "@/hooks/use-users"
 import { useCommission, usePayCommission } from "@/hooks/use-commission"
-import { AppUser } from "@/lib/types"
+import {AppUser, Transaction} from "@/lib/types"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 import RequestCardSkeleton from "@/components/ui/request-card-skeleton"
@@ -46,6 +47,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { usePlatform } from "@/hooks/use-platform"
 import { useAddUserPermission } from "@/hooks/use-users"
+import { UserTransactionsContent } from "./user-transactions-content"
 
 const statusOptions = [
     { value: "all", label: "Tous" },
@@ -72,6 +74,7 @@ export function UsersContent() {
     const [showAddPermissionForm, setShowAddPermissionForm] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+    const [viewingTransactions, setViewingTransactions] = useState(false)
     const itemsPerPage = 10
 
     useEffect(() => {
@@ -108,7 +111,7 @@ export function UsersContent() {
     const walletQuery = useUserWallet(selectedUser?.id || "")
     const transactionsQuery = useUserTransactions(selectedUser?.id || "")
     const permissionsQuery = useUserPermissions(selectedUser?.id || "")
-    const commissionsQuery = useCommission({ user_id: selectedUser?.id, type: "PENDING" })
+    const commissionsQuery = useUserCommissions(selectedUser?.id || "")
     const payCommissionMutation = usePayCommission()
 
     // Load user data when a user is selected
@@ -117,6 +120,7 @@ export function UsersContent() {
             walletQuery.mutate()
             transactionsQuery.mutate()
             permissionsQuery.mutate()
+            commissionsQuery.mutate()
         }
     }, [selectedUser?.id, panelOpen])
 
@@ -262,6 +266,10 @@ export function UsersContent() {
         }
     }, [error])
 
+
+    if (viewingTransactions && selectedUser) {
+        return <UserTransactionsContent user={selectedUser} onBack={() => setViewingTransactions(false)} />
+    }
 
     return (
         <DashboardContent>
@@ -493,24 +501,36 @@ export function UsersContent() {
                                         ))}
                                     </div>
                                 ) : transactionsQuery?.data && transactionsQuery.data.results.length > 0 ? (
-                                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                                        {transactionsQuery.data.results.slice(0, 5).map((trans) => (
-                                            <div key={trans.id} className="flex justify-between items-center p-2 bg-muted rounded">
-                                                <div className="flex-1">
-                                                    <p className="text-xs font-medium text-foreground">{trans.transaction_id}</p>
-                                                    <p className="text-xs text-muted-foreground">{trans.status_display}</p>
+                                    <>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
+                                            {transactionsQuery.data.results.slice(0, 5).map((trans:Transaction) => (
+                                                <div key={trans.id} className="flex justify-between items-center p-2 bg-muted rounded">
+                                                    <div className="flex-1">
+                                                        <p className="text-xs font-medium text-foreground">{trans.transaction_id}</p>
+                                                        <p className="text-xs text-muted-foreground">{trans.status_display}</p>
+                                                    </div>
+                                                    <span className="text-sm font-medium text-foreground">
+                                                        {formatCurrency(Number(trans.amount))}
+                                                    </span>
                                                 </div>
-                                                <span className="text-sm font-medium text-foreground">
-                                                    {formatCurrency(Number(trans.amount))}
-                                                </span>
-                                            </div>
-                                        ))}
-                                        {transactionsQuery.data.results.length > 5 && (
-                                            <p className="text-xs text-muted-foreground text-center pt-2">
-                                                +{transactionsQuery.data.results.length - 5} de plus
-                                            </p>
-                                        )}
-                                    </div>
+                                            ))}
+                                            {transactionsQuery.data.results.length > 5 && (
+                                                <p className="text-xs text-muted-foreground text-center pt-2">
+                                                    +{transactionsQuery.data.results.length - 5} de plus
+                                                </p>
+                                            )}
+                                        </div>
+                                        <Button
+                                            onClick={() => {
+                                                setPanelOpen(false)
+                                                setViewingTransactions(true)
+                                            }}
+                                            variant="outline"
+                                            className="w-full"
+                                        >
+                                            Voir toutes les transactions
+                                        </Button>
+                                    </>
                                 ) : (
                                     <p className="text-sm text-muted-foreground">Aucune transaction trouvée</p>
                                 )}
@@ -518,41 +538,68 @@ export function UsersContent() {
 
                             {/* Commissions */}
                             <div className="border-t border-border pt-6">
-                                <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-                                    Commissions en attente ({commissionsQuery?.data?.results.length || 0})
-                                </h3>
-                                {commissionsQuery?.isLoading ? (
+                                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Résumé des commissions</h3>
+                                {commissionsQuery?.isPending ? (
                                     <div className="space-y-3">
-                                        {[1, 2].map((i) => (
-                                            <Skeleton key={i} className="h-5 w-full" />
+                                        {[1, 2, 3].map((i) => (
+                                            <Skeleton key={i} className="h-12 w-full" />
                                         ))}
                                     </div>
-                                ) : commissionsQuery?.data && commissionsQuery.data.results.length > 0 ? (
-                                    <>
-                                        <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
-                                            {commissionsQuery.data.results.slice(0, 5).map((commission) => (
-                                                <div key={commission.id} className="flex justify-between items-center p-2 bg-muted rounded">
-                                                    <div className="flex-1">
-                                                        <p className="text-xs font-medium text-foreground">{commission.id}</p>
-                                                        <p className="text-xs text-muted-foreground">{commission.status_display}</p>
-                                                    </div>
-                                                    <span className="text-sm font-medium text-foreground">
-                                                        {formatCurrency(Number(commission.commission_amount))}
-                                                    </span>
+                                ) : commissionsQuery?.data ? (
+                                    <div className="space-y-3">
+                                        {/* Pending Commissions */}
+                                        <div className="p-3 bg-muted rounded-lg border border-border">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className="text-xs text-muted-foreground mb-1">En attente</p>
+                                                    <p className="text-sm font-semibold text-foreground">
+                                                        {formatCurrency(Number(commissionsQuery.data.pending_total))}
+                                                    </p>
                                                 </div>
-                                            ))}
+                                                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                                    {commissionsQuery.data.pending_count} commission{commissionsQuery.data.pending_count !== 1 ? 's' : ''}
+                                                </span>
+                                            </div>
                                         </div>
-                                        {commissionsQuery.data.results.length > 5 && (
-                                            <p className="text-xs text-muted-foreground text-center mb-4">
-                                                +{commissionsQuery.data.results.length - 5} de plus
-                                            </p>
+
+                                        {/* Paid Commissions */}
+                                        <div className="p-3 bg-muted rounded-lg border border-border">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className="text-xs text-muted-foreground mb-1">Payées</p>
+                                                    <p className="text-sm font-semibold text-foreground">
+                                                        {formatCurrency(Number(commissionsQuery.data.paid_total))}
+                                                    </p>
+                                                </div>
+                                                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                                    {commissionsQuery.data.paid_count} commission{commissionsQuery.data.paid_count !== 1 ? 's' : ''}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Payable Commissions */}
+                                        <div className="p-3 bg-muted rounded-lg border border-border">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className="text-xs text-muted-foreground mb-1">Payable</p>
+                                                    <p className="text-sm font-semibold text-foreground">
+                                                        {formatCurrency(Number(commissionsQuery.data.payable_total))}
+                                                    </p>
+                                                </div>
+                                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                                    {commissionsQuery.data.payable_count} commission{commissionsQuery.data.payable_count !== 1 ? 's' : ''}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {Number(commissionsQuery.data.payable_total) > 0 && (
+                                            <Button onClick={handlePayCommission} className="w-full mt-2" disabled={isProcessing || commissionsQuery.isPending}>
+                                                {isProcessing ? "Paiement en cours..." : "Payer les commissions"}
+                                            </Button>
                                         )}
-                                        <Button onClick={handlePayCommission} className="w-full" disabled={isProcessing || commissionsQuery.isPending}>
-                                            {isProcessing ? "Paiement en cours..." : "Payer la commission"}
-                                        </Button>
-                                    </>
+                                    </div>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground">Aucune commission en attente</p>
+                                    <p className="text-sm text-muted-foreground">Aucune donnée de commission disponible</p>
                                 )}
                             </div>
 

@@ -37,6 +37,13 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -78,6 +85,109 @@ const updateCredentialsSchema = z.object({
 type CreateCashDeskInput = z.infer<typeof createCashDeskSchema>
 type UpdateCredentialsInput = z.infer<typeof updateCredentialsSchema>
 
+/*
+// COMMENTED OUT: PlatformCombobox - Temporarily disabled in favor of Select component
+// This was causing click-through issues in the Dialog + Popover + Command combination
+// TODO: Reimplement when Dialog/Popover event handling is resolved
+
+interface PlatformComboboxProps {
+    selectedPlatformId: string
+    onPlatformSelect: (platformId: string) => void
+    searchTerm: string
+    onSearchChange: (term: string) => void
+    isLoading: boolean
+    platforms: any[] | undefined
+    error?: Partial<Record<keyof CreateCashDeskInput, string>>
+}
+
+function PlatformCombobox({
+    selectedPlatformId,
+    onPlatformSelect,
+    searchTerm,
+    onSearchChange,
+    isLoading,
+    platforms,
+    error,
+}: PlatformComboboxProps) {
+    // LOCAL state - component manages its own open/close
+    const [open, setOpen] = useState(false)
+
+    return (
+        <div className="space-y-2">
+            <label className="text-sm font-medium">Plateforme</label>
+            <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                            "w-full justify-between",
+                            !selectedPlatformId && "text-muted-foreground"
+                        )}
+                        aria-expanded={open}
+                        type="button"
+                    >
+                        {selectedPlatformId
+                            ? platforms?.find(
+                                (platform) => platform.id === selectedPlatformId
+                            )?.name
+                            : "Rechercher plateforme..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                    className="w-[400px] p-0"
+                >
+                    <Command shouldFilter={false}>
+                        <CommandInput
+                            placeholder="Rechercher plateforme..."
+                            value={searchTerm}
+                            onValueChange={onSearchChange}
+                            autoFocus
+                        />
+                        <CommandList>
+                            <CommandEmpty>Aucune plateforme trouvée</CommandEmpty>
+                            <CommandGroup>
+                                {isLoading ? (
+                                    <div className="py-6 px-2 text-center text-sm">
+                                        Chargement...
+                                    </div>
+                                ) : (
+                                    platforms?.map((platform) => (
+                                        <CommandItem
+                                            value={platform.id}
+                                            key={platform.id}
+                                            onSelect={() => {
+                                                onPlatformSelect(platform.id)
+                                                setOpen(false)
+                                                onSearchChange("")
+                                            }}
+                                        >
+                                            <Check
+                                                className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    selectedPlatformId === platform.id
+                                                        ? "opacity-100"
+                                                        : "opacity-0"
+                                                )}
+                                            />
+                                            {platform.name}
+                                        </CommandItem>
+                                    ))
+                                )}
+                            </CommandGroup>
+                        </CommandList>
+                    </Command>
+                </PopoverContent>
+            </Popover>
+            {error?.platform_id && (
+                <p className="text-sm text-destructive">{error.platform_id}</p>
+            )}
+        </div>
+    )
+}
+*/
+
 export function CashDeskContent() {
     const [searchQuery, setSearchQuery] = useState("")
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
@@ -88,9 +198,6 @@ export function CashDeskContent() {
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
     const [updateCredentialsDialogOpen, setUpdateCredentialsDialogOpen] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
-    const [platformSearch, setPlatformSearch] = useState("")
-    const [platformComboOpen, setPlatformComboOpen] = useState(false)
-    const [selectedPlatformId, setSelectedPlatformId] = useState("")
 
     const itemsPerPage = 6
 
@@ -104,16 +211,6 @@ export function CashDeskContent() {
         return () => clearTimeout(debounceTimer)
     }, [searchQuery])
 
-    // Debounce search query for platforms
-    const [debouncedPlatformSearch, setDebouncedPlatformSearch] = useState("")
-    useEffect(() => {
-        const debounceTimer = setTimeout(() => {
-            setDebouncedPlatformSearch(platformSearch)
-        }, 300)
-
-        return () => clearTimeout(debounceTimer)
-    }, [platformSearch])
-
     const { data: cashDesks, isLoading, error } = useCashDesk({
         page: currentPage,
         search: debouncedSearchQuery,
@@ -122,20 +219,24 @@ export function CashDeskContent() {
     const createCashDesk = useCreateCashDesk()
     const updateStatus = useUpdateCashDeskStatus()
     const updateCredentials = useUpdateCashDeskCredentials()
-    const {data:platforms, isLoading:loadingPlatforms, error:platformError} = usePlatform({
-        search: debouncedPlatformSearch
+    const {data:platforms, isLoading:loadingPlatforms} = usePlatform({
+        search: ""
     })
 
-    const [formData, setFormData] = useState<CreateCashDeskInput>({
-        platform_id: "",
-        name: "",
-        cashdeskid: "",
-        login: "",
-        cashierpass: "",
-        hash: "",
+    // Create cashdesk form
+    const createForm = useForm<CreateCashDeskInput>({
+        resolver: zodResolver(createCashDeskSchema),
+        defaultValues: {
+            platform_id: "",
+            name: "",
+            cashdeskid: "",
+            login: "",
+            cashierpass: "",
+            hash: "",
+        },
     })
-    const [formErrors, setFormErrors] = useState<Partial<Record<keyof CreateCashDeskInput, string>>>({})
 
+    // Credentials form
     const credentialsForm = useForm<UpdateCredentialsInput>({
         resolver: zodResolver(updateCredentialsSchema),
         defaultValues: {
@@ -145,19 +246,13 @@ export function CashDeskContent() {
         },
     })
 
-    const validateForm = (data: CreateCashDeskInput) => {
-        const result = createCashDeskSchema.safeParse(data)
-        if (!result.success) {
-            const errors: Partial<Record<keyof CreateCashDeskInput, string>> = {}
-            result.error.errors.forEach((error) => {
-                const path = error.path[0] as keyof CreateCashDeskInput
-                errors[path] = error.message
-            })
-            setFormErrors(errors)
-            return false
-        }
-        setFormErrors({})
-        return true
+    const onCreateSubmit = (data: CreateCashDeskInput) => {
+        createCashDesk.mutate(data, {
+            onSuccess: () => {
+                createForm.reset()
+                setCreateDialogOpen(false)
+            },
+        })
     }
 
     // Filter cashdesks
@@ -171,14 +266,6 @@ export function CashDeskContent() {
             (filterActive === "inactive" && !desk.is_active)
         return matchesSearch && matchesFilter
     }) || []
-
-    const handleCreateCashDesk = (data: CreateCashDeskInput) => {
-        createCashDesk.mutate(data, {
-            onSuccess: () => {
-                setCreateDialogOpen(false)
-            },
-        })
-    }
 
     const handleSelectCashDesk = (desk: CashDesk) => {
         setSelectedCashDesk(desk)
@@ -224,13 +311,6 @@ export function CashDeskContent() {
             console.log("An error occurred during cashdesks loading:", error)
         }
     }, [error])
-    
-    useEffect(()=>{
-        if (platformError){
-            toast.error("Echec du chargement des caisses, veuillez réessayer")
-            console.error("Error loading platforms:",error)
-        }
-    },[platformError])
 
     return (
         <DashboardContent>
@@ -263,181 +343,114 @@ export function CashDeskContent() {
                                         Ajouter une nouvelle caisse à votre plateforme
                                     </DialogDescription>
                                 </DialogHeader>
-                                <form
-                                    onSubmit={(e) => {
-                                        e.preventDefault()
-                                        if (validateForm(formData)) {
-                                            handleCreateCashDesk(formData)
-                                            setFormData({
-                                                platform_id: "",
-                                                name: "",
-                                                cashdeskid: "",
-                                                login: "",
-                                                cashierpass: "",
-                                                hash: "",
-                                            })
-                                        }
-                                    }}
-                                    className="space-y-4"
-                                >
-                                    {/* Platform Selection */}
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium">Plateforme</label>
-                                        <Popover open={platformComboOpen} onOpenChange={(open) => {
-                                            if (open) {
-                                                setPlatformComboOpen(true)
-                                            } else {
-                                                setPlatformComboOpen(false)
-                                                setPlatformSearch("")
-                                            }
-                                        }}>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    variant="outline"
-                                                    role="combobox"
-                                                    className={cn(
-                                                        "w-full justify-between",
-                                                        !formData.platform_id && "text-muted-foreground"
-                                                    )}
-                                                    aria-expanded={platformComboOpen}
-                                                    type="button"
-                                                >
-                                                    {formData.platform_id
-                                                        ? platforms?.results.find(
-                                                            (platform) => platform.id === formData.platform_id
-                                                        )?.name
-                                                        : "Rechercher plateforme..."}
-                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-[400px] p-0 z-[100]" align="start" sideOffset={8} onOpenAutoFocus={(e) => e.preventDefault()} onInteractOutside={(e) => {
-                                                const target = e.target as HTMLElement
-                                                if (!target.closest('[cmdk-item]') && !target.closest('[cmdk-input]')) {
-                                                    setPlatformComboOpen(false)
-                                                }
-                                            }}>
-                                                <Command shouldFilter={false}>
-                                                    <CommandInput
-                                                        placeholder="Rechercher plateforme..."
-                                                        value={platformSearch}
-                                                        onValueChange={setPlatformSearch}
-                                                        autoFocus
-                                                    />
-                                                    <CommandList>
-                                                        <CommandEmpty>Aucune plateforme trouvée</CommandEmpty>
-                                                        <CommandGroup>
-                                                            {loadingPlatforms ? (
-                                                                <div className="py-6 px-2 text-center text-sm">
-                                                                    Chargement...
-                                                                </div>
-                                                            ) : (
-                                                                platforms?.results.map((platform) => (
-                                                                    <CommandItem
-                                                                        value={platform.id}
-                                                                        key={platform.id}
-                                                                        onSelect={() => {
-                                                                            setFormData({...formData, platform_id: platform.id})
-                                                                            setPlatformComboOpen(false)
-                                                                            setPlatformSearch("")
-                                                                        }}
-                                                                    >
-                                                                        <Check
-                                                                            className={cn(
-                                                                                "mr-2 h-4 w-4",
-                                                                                formData.platform_id === platform.id
-                                                                                    ? "opacity-100"
-                                                                                    : "opacity-0"
-                                                                            )}
-                                                                        />
-                                                                        {platform.name}
-                                                                    </CommandItem>
-                                                                ))
-                                                            )}
-                                                        </CommandGroup>
-                                                    </CommandList>
-                                                </Command>
-                                            </PopoverContent>
-                                        </Popover>
-                                        {formErrors.platform_id && (
-                                            <p className="text-sm text-destructive">{formErrors.platform_id}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Nom */}
-                                    <div className="space-y-2">
-                                        <label htmlFor="name" className="text-sm font-medium">Nom</label>
-                                        <Input
-                                            id="name"
-                                            placeholder="Entrez le nom de la caisse"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                <Form {...createForm}>
+                                    <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
+                                        {/* Platform Selection */}
+                                        <FormField
+                                            control={createForm.control}
+                                            name="platform_id"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Plateforme</FormLabel>
+                                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loadingPlatforms}>
+                                                        <FormControl>
+                                                            <SelectTrigger className="w-full">
+                                                                <SelectValue placeholder="Sélectionner une plateforme" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {platforms?.results?.map((platform) => (
+                                                                <SelectItem key={platform.id} value={platform.id}>
+                                                                    {platform.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
                                         />
-                                        {formErrors.name && (
-                                            <p className="text-sm text-destructive">{formErrors.name}</p>
-                                        )}
-                                    </div>
 
-                                    {/* ID Workspace */}
-                                    <div className="space-y-2">
-                                        <label htmlFor="cashdeskid" className="text-sm font-medium">ID Workspace</label>
-                                        <Input
-                                            id="cashdeskid"
-                                            placeholder="Entrez l'ID de la caisse"
-                                            value={formData.cashdeskid}
-                                            onChange={(e) => setFormData({...formData, cashdeskid: e.target.value})}
+                                        {/* Nom */}
+                                        <FormField
+                                            control={createForm.control}
+                                            name="name"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Nom</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Entrez le nom de la caisse" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
                                         />
-                                        {formErrors.cashdeskid && (
-                                            <p className="text-sm text-destructive">{formErrors.cashdeskid}</p>
-                                        )}
-                                    </div>
 
-                                    {/* Identifiant */}
-                                    <div className="space-y-2">
-                                        <label htmlFor="login" className="text-sm font-medium">Identifiant</label>
-                                        <Input
-                                            id="login"
-                                            placeholder="Entrez l'identifiant"
-                                            value={formData.login}
-                                            onChange={(e) => setFormData({...formData, login: e.target.value})}
+                                        {/* ID Workspace */}
+                                        <FormField
+                                            control={createForm.control}
+                                            name="cashdeskid"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>ID Workspace</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Entrez l'ID de la caisse" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
                                         />
-                                        {formErrors.login && (
-                                            <p className="text-sm text-destructive">{formErrors.login}</p>
-                                        )}
-                                    </div>
 
-                                    {/* Mot de passe */}
-                                    <div className="space-y-2">
-                                        <label htmlFor="cashierpass" className="text-sm font-medium">Mot de passe</label>
-                                        <Input
-                                            id="cashierpass"
-                                            type="password"
-                                            placeholder="Entrez le mot de passe"
-                                            value={formData.cashierpass}
-                                            onChange={(e) => setFormData({...formData, cashierpass: e.target.value})}
+                                        {/* Identifiant */}
+                                        <FormField
+                                            control={createForm.control}
+                                            name="login"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Identifiant</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Entrez l'identifiant" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
                                         />
-                                        {formErrors.cashierpass && (
-                                            <p className="text-sm text-destructive">{formErrors.cashierpass}</p>
-                                        )}
-                                    </div>
 
-                                    {/* Hash */}
-                                    <div className="space-y-2">
-                                        <label htmlFor="hash" className="text-sm font-medium">Hash</label>
-                                        <Input
-                                            id="hash"
-                                            placeholder="Entrez le hash"
-                                            value={formData.hash}
-                                            onChange={(e) => setFormData({...formData, hash: e.target.value})}
+                                        {/* Mot de passe */}
+                                        <FormField
+                                            control={createForm.control}
+                                            name="cashierpass"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Mot de passe</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="password" placeholder="Entrez le mot de passe" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
                                         />
-                                        {formErrors.hash && (
-                                            <p className="text-sm text-destructive">{formErrors.hash}</p>
-                                        )}
-                                    </div>
 
-                                    <Button type="submit" disabled={isProcessing} className="w-full">
-                                        {isProcessing ? "Création en cours..." : "Créer Caisse"}
-                                    </Button>
-                                </form>
+                                        {/* Hash */}
+                                        <FormField
+                                            control={createForm.control}
+                                            name="hash"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Hash</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Entrez le hash" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <Button type="submit" disabled={createCashDesk.isPending} className="w-full">
+                                            {createCashDesk.isPending ? "Création en cours..." : "Créer Caisse"}
+                                        </Button>
+                                    </form>
+                                </Form>
                             </DialogContent>
                         </Dialog>
                     </div>

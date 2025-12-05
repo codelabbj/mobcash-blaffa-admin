@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils"
 
-type StatusType = "pending" | "approved" | "processing" | "failed" | "cancelled" | "refunded" | "active" | "inactive"
+type StatusType = "pending" | "approved" | "processing" | "failed" | "cancelled" | "refunded" | "active" | "inactive"|"completed"
 const statusLabel = [
     {value:"pending",label:"En attente"},
     {value:"approved",label:"Approuver"},
@@ -10,6 +10,7 @@ const statusLabel = [
     {value: "Refunded",label:"Rembourser"},
     {value:"active",label:"Actif"},
     {value:"inactive",label:"Inactif"},
+    {value:"completed",label:"Terminer"},
 ]
 const statusStyles: Record<StatusType, { bg: string; text: string; dot: string }> = {
     pending: {
@@ -51,6 +52,11 @@ const statusStyles: Record<StatusType, { bg: string; text: string; dot: string }
         bg: "bg-gray-100 dark:bg-gray-800",
         text: "text-gray-600 dark:text-gray-400",
         dot: "bg-gray-500",
+    },
+    completed :{
+        bg: "bg-green-50 dark:bg-green-950",
+        text: "text-green-700 dark:text-green-300",
+        dot: "bg-green-500",
     }
 }
 
