@@ -1,6 +1,6 @@
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import api from "@/lib/api";
-import {AppUser, Commission, CommissionStats, PaginatedContent, Permission, Transaction} from "@/lib/types";
+import {AppUser,CommissionStats, PaginatedContent, Permission, Transaction} from "@/lib/types";
 import {toast} from "sonner";
 import {error} from "next/dist/build/output/log";
 

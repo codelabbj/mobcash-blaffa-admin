@@ -79,7 +79,7 @@ export function UserTransactionsContent({ user, onBack }: UserTransactionsConten
             transaction_type: selectedTransactionType,
         }
     )
-    const { data: platformsData, isPending: loadingPlatform , error : platformError } = usePlatform({})
+    const { data: platformsData, error : platformError } = usePlatform({})
 
     const totalPages = Math.ceil((transactionsQuery?.count || 0) / (transactionsQuery?.page_size || itemsPerPage))
     const startIndex = (currentPage - 1) * (transactionsQuery?.page_size || itemsPerPage)
