@@ -23,6 +23,14 @@ interface Filters {
     is_active?:string,
 }
 
+interface transactionFilters {
+    page?:number,
+    search?:string;
+    platform?:string;
+    status?:string;
+    transaction_type?:string;
+}
+
 export function useUsers(data:Filters){
     return useQuery({
         queryKey:["users",data.page,data.search,data.is_active],
@@ -104,25 +112,26 @@ export function useUserWallet(id: string){
     })
 }
 
-export function useUserTransactions(id: string, page?: number){
-    // If page is provided, use useQuery for automatic pagination
-    if (page !== undefined) {
-        return useQuery({
-            queryKey:["user-transactions", id, page],
-            queryFn: async ()=>{
-                const res = await api.get<PaginatedContent<Transaction>>(`/admin/users/${id}/transactions/`, {
-                    params: { page }
-                })
-                return res.data;
-            },
-            onError:()=>{
-                toast.error("Echec du chargement des transactions utilisateur")
-                console.error("Error loading user transactions:",error)
-            }
-        })
-    }
+export function useUserTransactions(id:string,filters:transactionFilters){
+    return useQuery({
+        queryKey:["user-transactions", id, filters.page, filters.search, filters.platform, filters.status, filters.transaction_type],
+        queryFn: async ()=>{
+            const query : Record<string, number|string|boolean> = {}
+            if (filters.page) query.page = filters.page;
+            if (filters.search && filters.search!=="") query.search = filters.search;
+            if (filters.platform && filters.platform!=="all") query.platform = filters.platform;
+            if (filters.status && filters.status!=="all") query.status = filters.status;
+            if (filters.transaction_type && filters.transaction_type!=="all") query.transaction_type = filters.transaction_type;
 
-    // Otherwise, use useMutation for manual fetching
+            const res = await api.get<PaginatedContent<Transaction>>(`/admin/users/${id}/transactions/`, {
+                params: query
+            })
+            return res.data;
+        },
+    })
+}
+
+export function useUserTransactionsFirstPage(id: string){
     return useMutation({
         mutationFn: async ()=>{
             const res = await api.get<PaginatedContent<Transaction>>(`/admin/users/${id}/transactions/`)
@@ -132,7 +141,7 @@ export function useUserTransactions(id: string, page?: number){
             toast.error("Echec du chargement des transactions utilisateur")
             console.error("Error loading user transactions:",error)
         }
-    }) as any
+    })
 }
 
 export function useUserPermissions(id: string){

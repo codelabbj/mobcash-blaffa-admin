@@ -9,6 +9,7 @@ import { SidePanel } from "@/components/ui/side-panel"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { RequestCard } from "@/components/ui/request-card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { FilterSection } from "@/components/ui/filter-section"
 import {
     Pagination,
     PaginationContent,
@@ -20,25 +21,70 @@ import {
 } from "@/components/ui/pagination"
 import { useUserTransactions } from "@/hooks/use-users"
 import { AppUser, Transaction } from "@/lib/types"
+import {toast} from "sonner";
+import {usePlatform} from "@/hooks/use-platform";
 
 interface UserTransactionsContentProps {
     user: AppUser
     onBack: () => void
 }
 
+const statusOptions = [
+    { value: "all", label: "Tous" },
+    { value: "COMPLETED", label: "Complété" },
+    { value: "FAILED", label: "Échoué" },
+    { value: "PENDING", label: "En attente" },
+    { value: "PROCESSING", label: "En cours" },
+    { value : "CANCELLED", label: "Annulé"},
+    { value: "REFUNDED", label:"Remboursé"}
+]
+
+const transactionTypeOptions = [
+    { value: "all", label: "Tous" },
+    { value: "WITHDRAWAL", label: "Retrait" },
+    { value: "DEPOSIT", label: "Dépôt" },
+]
+
 export function UserTransactionsContent({ user, onBack }: UserTransactionsContentProps) {
     const [currentPage, setCurrentPage] = useState(1)
     const [panelOpen, setPanelOpen] = useState(false)
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
+    const [selectedStatus, setSelectedStatus] = useState<string>("")
+    const [searchQuery, setSearchQuery] = useState<string>("")
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("")
+    const [selectedPlatform, setSelectedPlatform] = useState<string>("")
+    const [selectedTransactionType, setSelectedTransactionType] = useState<string>("")
     const itemsPerPage = 10
 
-    // Fetch paginated transactions from backend
-    const transactionsQuery = useUserTransactions(user.id || "", currentPage)
+    // Debounce search query
+    useEffect(() => {
+        const debouncer = setTimeout(
+            () => {
+                setDebouncedSearchQuery(searchQuery)
+                setCurrentPage(1)
+            }, 500
+        )
 
-    const totalPages = Math.ceil((transactionsQuery?.data?.count || 0) / (transactionsQuery?.data?.page_size || itemsPerPage))
-    const startIndex = (currentPage - 1) * (transactionsQuery?.data?.page_size || itemsPerPage)
-    const endIndex = startIndex + (transactionsQuery?.data?.page_size || itemsPerPage)
-    const paginatedData = transactionsQuery?.data?.results || []
+        return () => clearTimeout(debouncer)
+    }, [searchQuery])
+
+    // Fetch paginated transactions from backend
+    const { data: transactionsQuery, isPending: loadingTransactions, error : transactionsError } = useUserTransactions(
+        user.id,
+        {
+            page: currentPage,
+            search: debouncedSearchQuery,
+            platform: selectedPlatform,
+            status: selectedStatus,
+            transaction_type: selectedTransactionType,
+        }
+    )
+    const { data: platformsData, isPending: loadingPlatform , error : platformError } = usePlatform({})
+
+    const totalPages = Math.ceil((transactionsQuery?.count || 0) / (transactionsQuery?.page_size || itemsPerPage))
+    const startIndex = (currentPage - 1) * (transactionsQuery?.page_size || itemsPerPage)
+    const endIndex = startIndex + (transactionsQuery?.page_size || itemsPerPage)
+    const paginatedData = transactionsQuery?.results || []
 
     const getPageNumber = () => {
         const pages = []
@@ -80,6 +126,37 @@ export function UserTransactionsContent({ user, onBack }: UserTransactionsConten
         setPanelOpen(true)
     }
 
+    const handleClearFilters = () => {
+        setSearchQuery("")
+        setSelectedStatus("")
+        setSelectedPlatform("")
+        setSelectedTransactionType("")
+        setCurrentPage(1)
+    }
+
+    // Build platform filter options
+    const platformFilterOptions = [
+        { value: "all", label: "Tous" },
+        ...(platformsData?.results?.map((p) => ({
+            value: p.id,
+            label: p.name,
+        })) || []),
+    ]
+
+    useEffect(() => {
+        if (transactionsError){
+            toast.error("Erreur lors du chargement des transactions")
+            console.error("Error loading transactions:",transactionsError)
+        }
+    }, [transactionsError]);
+
+    useEffect(() => {
+        if (platformError){
+            toast.error("Erreur lors du chargement des platformes")
+            console.error("Error loading platform:",platformError)
+        }
+    }, [platformError]);
+
     return (
         <DashboardContent>
             <div className="flex gap-6 min-h-[500px] overflow-hidden">
@@ -103,13 +180,54 @@ export function UserTransactionsContent({ user, onBack }: UserTransactionsConten
                         </div>
                     </div>
 
+                    {/* Filters */}
+                    <div className="mb-6">
+                        <FilterSection
+                            searchValue={searchQuery}
+                            onSearchChange={setSearchQuery}
+                            filters={[
+                                {
+                                    placeholder: "Statut",
+                                    label: "Statut",
+                                    value: selectedStatus,
+                                    options: statusOptions,
+                                    onChange: (value) => {
+                                        setSelectedStatus(value)
+                                        setCurrentPage(1)
+                                    },
+                                },
+                                {
+                                    placeholder: "Plateforme",
+                                    label: "Plateforme",
+                                    value: selectedPlatform,
+                                    options: platformFilterOptions,
+                                    onChange: (value) => {
+                                        setSelectedPlatform(value)
+                                        setCurrentPage(1)
+                                    },
+                                },
+                                {
+                                    placeholder: "Type",
+                                    label: "Type",
+                                    value: selectedTransactionType,
+                                    options: transactionTypeOptions,
+                                    onChange: (value) => {
+                                        setSelectedTransactionType(value)
+                                        setCurrentPage(1)
+                                    },
+                                },
+                            ]}
+                            onClearAll={handleClearFilters}
+                        />
+                    </div>
+
                     <p className="text-muted-foreground mb-2">
                         {paginatedData.length} transaction{paginatedData.length !== 1 ? "s" : ""}
                     </p>
 
                     {/* Transactions List */}
                     <div className="space-y-3 mb-6">
-                        {transactionsQuery?.isPending ? (
+                        {loadingTransactions ? (
                             [1, 2, 3, 4].map((i) => (
                                 <Skeleton key={i} className="h-16 w-full" />
                             ))
@@ -140,8 +258,8 @@ export function UserTransactionsContent({ user, onBack }: UserTransactionsConten
                     {paginatedData.length > 0 && totalPages > 1 && (
                         <div className="flex items-center justify-between mb-4">
                             <p className="text-muted-foreground mb-2 w-full">
-                                Affichage de {startIndex + 1} à {Math.min(endIndex, transactionsQuery?.data?.results.length || 0)} sur{" "}
-                                {transactionsQuery?.data?.results.length} résultat{transactionsQuery?.data?.results.length || 0 > 1 ? "s" : ""}
+                                Affichage de {startIndex + 1} à {Math.min(endIndex, transactionsQuery?.count || 0)} sur{" "}
+                                {transactionsQuery?.count} résultat{transactionsQuery?.count || 0 > 1 ? "s" : ""}
                             </p>
                             <Pagination>
                                 <PaginationContent>

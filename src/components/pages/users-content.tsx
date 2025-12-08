@@ -17,10 +17,10 @@ import {
 } from "@/components/ui/pagination"
 import { Button } from "@/components/ui/button"
 import {
-    useUsers, useUserWallet, useUserTransactions, useUserPermissions, useActiveUser, useDeactivateUser,
-    useUserCommissions,
+    useUsers, useUserWallet, useUserPermissions, useActiveUser, useDeactivateUser,
+    useUserCommissions, useUserTransactionsFirstPage,
 } from "@/hooks/use-users"
-import { useCommission, usePayCommission } from "@/hooks/use-commission"
+import { usePayCommission } from "@/hooks/use-commission"
 import {AppUser, Transaction} from "@/lib/types"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -109,7 +109,7 @@ export function UsersContent() {
 
     // Wallet, Transactions, and Permissions hooks - will be triggered manually when user is selected
     const walletQuery = useUserWallet(selectedUser?.id || "")
-    const transactionsQuery = useUserTransactions(selectedUser?.id || "")
+    const transactionsQuery = useUserTransactionsFirstPage(selectedUser?.id||"")
     const permissionsQuery = useUserPermissions(selectedUser?.id || "")
     const commissionsQuery = useUserCommissions(selectedUser?.id || "")
     const payCommissionMutation = usePayCommission()
