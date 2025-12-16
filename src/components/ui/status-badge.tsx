@@ -1,13 +1,14 @@
 import { cn } from "@/lib/utils"
 
-type StatusType = "pending" | "approved" | "processing" | "failed" | "cancelled" | "refunded" | "active" | "inactive"|"completed"
+type StatusType = "pending" | "approved" | "processing" | "failed" | "cancelled" | "refunded" | "rejected" | "active" | "inactive"|"completed"
 const statusLabel = [
     {value:"pending",label:"En attente"},
     {value:"approved",label:"Approuver"},
     {value:"processing",label:"En cours"},
     {value:"failed",label:"Echec"},
     {value:"cancelled",label:"Annuler"},
-    {value: "Refunded",label:"Rembourser"},
+    {value: "refunded",label:"Rembourser"},
+    {value:"rejected",label:"Rejeter"},
     {value:"active",label:"Actif"},
     {value:"inactive",label:"Inactif"},
     {value:"completed",label:"Terminer"},
@@ -24,6 +25,11 @@ const statusStyles: Record<StatusType, { bg: string; text: string; dot: string }
         dot: "bg-green-500",
     },
     cancelled: {
+        bg: "bg-red-50 dark:bg-red-950",
+        text: "text-red-700 dark:text-red-300",
+        dot: "bg-red-500",
+    },
+    rejected: {
         bg: "bg-red-50 dark:bg-red-950",
         text: "text-red-700 dark:text-red-300",
         dot: "bg-red-500",
@@ -68,7 +74,7 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, label, showDot = true, className }: StatusBadgeProps) {
-    const styles = statusStyles[status]
+    const styles = statusStyles[status] || statusStyles.pending // Fallback to pending styles if status is not found
     return (
         <span
             className={cn(
