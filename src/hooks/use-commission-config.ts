@@ -3,6 +3,11 @@ import api from "@/lib/api";
 import {toast} from "sonner";
 import {CommissionConfig, PaginatedContent} from "@/lib/types";
 
+interface EditCommissionConfig {
+    deposit_commission_rate: number,
+    withdrawal_commission_rate: number,
+}
+
 export function useCommissionConfig(){
     return useQuery({
         queryKey:["commission-config"],
@@ -17,8 +22,8 @@ export function useEditCommissionConfig(){
     const query = useQueryClient()
 
     return useMutation({
-        mutationFn: async (id:string) => {
-            const res = await api.patch(`/admin/commission-configs/${id}/`)
+        mutationFn: async ({id,data}:{id:string,data:EditCommissionConfig}) => {
+            const res = await api.patch(`/admin/commission-configs/${id}/`,data)
             return res.data
         },
         onSuccess:()=>{

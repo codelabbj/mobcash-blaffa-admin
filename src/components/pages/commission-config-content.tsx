@@ -141,7 +141,13 @@ export default function CommissionConfigContent() {
         if (!selectedConfig) return
         setIsProcessing(true)
         try {
-            editConfigMutation.mutate(selectedConfig.id)
+            editConfigMutation.mutate({
+                id : selectedConfig.id,
+                data:{
+                    deposit_commission_rate:Number(data.deposit_commission_rate),
+                    withdrawal_commission_rate:Number(data.withdrawal_commission_rate),
+                }
+            })
             configForm.reset()
             setPanelOpen(false)
         } catch (error) {
