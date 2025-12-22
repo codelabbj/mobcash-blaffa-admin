@@ -353,3 +353,54 @@ export interface CommissionStats {
     payable_total: string;
     payable_count: number;
 }
+
+export interface AdminTransactionStats {
+    overview:        Overview;
+    by_type:         ByTransactionType;
+    by_status:       ByStatus;
+    by_platform:     ByPlatform[];
+    amounts:         Amounts;
+    success_rate:    SuccessRate;
+    with_commission: number;
+}
+
+export interface Amounts {
+    average: number;
+    min:     number;
+    max:     number;
+}
+
+export interface ByPlatform {
+    platform__name: string;
+    platform__code: string;
+    count:          number;
+    total_amount:   number;
+}
+
+export interface ByStatus {
+    COMPLETED: number;
+    FAILED:    number;
+}
+
+export interface ByTransactionType {
+    deposits:    Deposits;
+    withdrawals: Deposits;
+}
+
+export interface Deposits {
+    count:        number;
+    completed:    number;
+    total_amount: number;
+}
+
+export interface Overview {
+    total_transactions: number;
+    total_users:        number;
+    total_platforms:    number;
+}
+
+export interface SuccessRate {
+    deposits:    number;
+    withdrawals: number;
+    overall:     number;
+}

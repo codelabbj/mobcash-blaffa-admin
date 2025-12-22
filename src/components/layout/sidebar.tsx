@@ -3,7 +3,7 @@
 import Link from "next/link"
 import {usePathname} from "next/navigation"
 import { cn } from "@/lib/utils"
-import {ArrowUpRight, XSquare, Users, Shield, User, LogOut, Boxes, Wallet, Settings} from "lucide-react"
+import {ArrowUpRight, XSquare, Users, Shield, User, LogOut, Boxes, Wallet, Settings,ArrowLeftRight} from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -60,6 +60,12 @@ const navItems = [
     href: "/users",
     icon: Users,
   },
+    {
+        label: "Transactions Admin",
+        labelEn: "Admin Transactions",
+        href: "/admin-transactions",
+        icon: ArrowLeftRight,
+    },
   {
     label: "Permissions",
     labelEn: "Permissions",
