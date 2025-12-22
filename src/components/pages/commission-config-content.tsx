@@ -1,15 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Settings } from "lucide-react"
-import { cn, formatDate } from "@/lib/utils"
-import { DashboardContent } from "@/components/layout/dashboard-content"
-import { RequestCard } from "@/components/ui/request-card"
-import { SidePanel } from "@/components/ui/side-panel"
-import { Button } from "@/components/ui/button"
+import {useEffect, useState} from "react"
+import {Settings} from "lucide-react"
+import {cn, formatDate} from "@/lib/utils"
+import {DashboardContent} from "@/components/layout/dashboard-content"
+import {RequestCard} from "@/components/ui/request-card"
+import {SidePanel} from "@/components/ui/side-panel"
+import {Button} from "@/components/ui/button"
 import RequestCardSkeleton from "@/components/ui/request-card-skeleton"
-import { FilterSection } from "@/components/ui/filter-section"
-import { toast } from "sonner"
+import {toast} from "sonner"
 import {
     Pagination,
     PaginationContent,
@@ -19,20 +18,13 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination"
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { useCommissionConfig, useEditCommissionConfig } from "@/hooks/use-commission-config"
-import { CommissionConfig } from "@/lib/types"
+import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage,} from "@/components/ui/form"
+import {Input} from "@/components/ui/input"
+import {useForm} from "react-hook-form"
+import {zodResolver} from "@hookform/resolvers/zod"
+import {z} from "zod"
+import {useCommissionConfig, useEditCommissionConfig} from "@/hooks/use-commission-config"
+import {CommissionConfig} from "@/lib/types"
 
 const editCommissionConfigSchema = z.object({
     deposit_commission_rate: z.string().min(0, "Le taux de commission de dépôt est requis"),
@@ -83,8 +75,7 @@ export default function CommissionConfigContent() {
 
     // Filter data
     const filteredData = commissionsData?.results.filter((item) => {
-        const matchesSearch = item.user_email.toLowerCase().includes(searchQuery.toLowerCase())
-        return matchesSearch
+        return item.user_email.toLowerCase().includes(searchQuery.toLowerCase())
     }) || []
 
     const totalPages = Math.ceil(filteredData.length / itemsPerPage)
