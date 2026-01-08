@@ -16,8 +16,6 @@
     --muted-foreground: oklch(0.5 0 0);
     --accent: oklch(0.5 0.2 25);
     --accent-foreground: oklch(0.995 0.001 70);
-    --hot: oklch(0.65 0.2 50);
-    --hot-foreground: oklch(0.995 0.001 70);
     --destructive: oklch(0.577 0.245 27.325);
     --destructive-foreground: oklch(1 0 0);
     --border: oklch(0.92 0.005 70);
@@ -56,8 +54,6 @@
     --muted-foreground: oklch(0.65 0.01 70);
     --accent: oklch(0.62 0.18 25);
     --accent-foreground: oklch(0.1 0.01 280);
-    --hot: oklch(0.7 0.18 50);
-    --hot-foreground: oklch(0.95 0.002 70);
     --destructive: oklch(0.704 0.191 22.216);
     --destructive-foreground: oklch(1 0 0);
     --border: oklch(0.95 0.002 70 / 15%);
@@ -95,8 +91,6 @@
     --color-muted-foreground: var(--muted-foreground);
     --color-accent: var(--accent);
     --color-accent-foreground: var(--accent-foreground);
-    --color-hot: var(--hot);
-    --color-hot-foreground: var(--hot-foreground);
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
     --color-border: var(--border);
@@ -124,9 +118,6 @@
 @layer base {
     * {
         @apply border-border outline-ring/50;
-    }
-    html, body {
-        @apply m-0 p-0 h-full;
     }
     body {
         @apply bg-background text-foreground;

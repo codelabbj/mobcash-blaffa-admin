@@ -32,50 +32,50 @@ const navItems = [
   {
     label: "Demandes de Recharge",
     labelEn: "Recharges Requests",
-    href: "/dashboard/recharges",
+    href: "/recharges",
     icon: ArrowUpRight,
   },
   {
     label: "Demandes d'Annulation",
     labelEn: "Cancellation Requests",
-    href: "/dashboard/cancellations",
+    href: "/cancellations",
     icon: XSquare,
   },
     {
         label: "Plateformes",
         labelEn: "Platforms",
-        href: "/dashboard/platform",
+        href: "/platform",
         icon: Boxes
 
     },
     {
         label: "Caisse",
         labelEn: "CashDesks",
-        href: "/dashboard/cashdesk",
+        href: "/cashdesk",
         icon: Wallet
     },
   {
     label: "Utilisateurs",
     labelEn: "Users",
-    href: "/dashboard/users",
+    href: "/users",
     icon: Users,
   },
     {
         label: "Transactions Admin",
         labelEn: "Admin Transactions",
-        href: "/dashboard/admin-transactions",
+        href: "/admin-transactions",
         icon: ArrowLeftRight,
     },
   {
     label: "Permissions",
     labelEn: "Permissions",
-    href: "/dashboard/permissions",
+    href: "/permissions",
     icon: Shield,
   },
     {
         label:"Configuration Commission",
         labelEn: "Commission Configuration",
-        href: "/dashboard/commission-config",
+        href: "/commission-config",
         icon: Settings,
     }
 ]
@@ -102,7 +102,7 @@ export function AppSidebar() {
       {/* Header with Logo */}
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <Link
-            href="/dashboard"
+            href="/"
             /* onClick={toggleSidebar} */
           className="flex items-center gap-3 w-full hover:bg-primary/10 rounded-lg p-2 transition-colors group"
         >
@@ -131,7 +131,7 @@ export function AppSidebar() {
             <SidebarMenu className="gap-3">
               {navItems.map((item) => {
                 const Icon = item.icon
-                const isActive = pathname === "/dashboard/"+item.href || pathname.startsWith("/dashboard/"+item.href + "/")
+                const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
 
                 return (
                   <SidebarMenuItem key={item.href}>
