@@ -12,6 +12,15 @@ interface LoginPayload {
     password: string
 }
 
+interface RegisterPayload {
+    email: string
+    phone_number: string
+    password: string
+    password_confirm: string
+    first_name: string
+    last_name: string
+}
+
 interface ProfileUpdatePayload {
     first_name: string
     last_name: string
@@ -31,11 +40,34 @@ export function useLogin() {
             toast.success("Connexion réussie!")
             // Use window.location for full page reload to ensure cookies are available for middleware
             setTimeout(() => {
-                router.push("/")
+                router.push("/dashboard")
             }, 100)
         },
         onError: (error) => {
             toast.error("Email ou mot de passe incorrecte")
+            console.error("Login error:", error)
+        },
+    })
+}
+
+export function useRegister(){
+    const router = useRouter()
+    const {login}= useAuth()
+    return useMutation({
+        mutationFn: async (data: RegisterPayload) => {
+            const res = await api.post<LoginResponse>("v1/auth/register/", data)
+            return res.data
+        },
+        onSuccess: (data) => {
+            login(data.tokens.access,data.tokens.refresh,data.user)
+            toast.success("Connexion réussie!")
+            // Use window.location for full page reload to ensure cookies are available for middleware
+            setTimeout(() => {
+                router.push("/dashboard")
+            }, 100)
+        },
+        onError: (error) => {
+            toast.error("Echec de la création de compte")
             console.error("Login error:", error)
         },
     })
@@ -78,3 +110,5 @@ export function useUpdateProfile() {
         }
     })
 }
+
+

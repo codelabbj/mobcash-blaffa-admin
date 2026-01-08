@@ -36,20 +36,23 @@ export default function LoginPage() {
     return (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-0 h-screen bg-background">
             <div className="lg:col-span-3 flex flex-col items-center justify-center space-y-8 px-8">
-                <div className="flex items-center gap-2 ">
-                    <div
-                        className="w-12 h-12 rounded-lg flex items-center justify-center text-sidebar-primary-foreground font-bold text-base flex-shrink-0"
-                        style={{
-                            background:
-                                "radial-gradient(135% 135% at 50% 50%, oklch(0.5 0.2 25) 0%, oklch(0.05 0.01 280) 100%)",
-                        }}
-                    >
-                        MB
-                    </div>
-                    <span className="text-sidebar-foreground font-bold text-xl transition-opacity duration-300">
+                <Link href="/">
+                    <div className="flex items-center gap-2 ">
+                        <div
+                            className="w-12 h-12 rounded-lg flex items-center justify-center text-sidebar-primary-foreground font-bold text-base flex-shrink-0"
+                            style={{
+                                background:
+                                    "radial-gradient(135% 135% at 50% 50%, oklch(0.5 0.2 25) 0%, oklch(0.05 0.01 280) 100%)",
+                            }}
+                        >
+                            MB
+                        </div>
+                        <span className="text-sidebar-foreground font-bold text-xl transition-opacity duration-300">
                         MobCash
                     </span>
-                </div>
+                    </div>
+                </Link>
+
 
                 <div className="w-full max-w-md space-y-6">
                     <div className="space-y-2">
@@ -126,6 +129,15 @@ export default function LoginPage() {
                                     <span>Se connecter</span>
                                 )}
                             </Button>
+
+
+                            <p className="text-center text-sm">
+                                Vous n'avez pas un compte ?{" "}
+                                <Link href="/sign-up" className="text-primary">
+                                    Créer un compte
+                                </Link>
+                            </p>
+
                         </form>
                     </Form>
                 </div>
