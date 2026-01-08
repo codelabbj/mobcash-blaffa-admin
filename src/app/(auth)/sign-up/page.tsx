@@ -55,7 +55,14 @@ export default function SignupPage() {
     });
 
     const handleSubmit = (values: z.infer<typeof formSchema>) => {
-        register.mutate(values);
+        register.mutate({
+            email:values.email,
+            phone_number:values.phone_number,
+            password:values.password,
+            password_confirm:values.password_confirm,
+            first_name:values.first_name,
+            last_name:values.last_name,
+        });
     };
 
     return (
@@ -246,7 +253,6 @@ export default function SignupPage() {
                         </g>
                     ))}
                 </svg>
-
             </div>
         </div>
     );
