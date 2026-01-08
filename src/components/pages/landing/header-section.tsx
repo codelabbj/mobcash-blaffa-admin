@@ -11,7 +11,7 @@ export function HeaderSection() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
             <nav className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
@@ -94,7 +94,7 @@ export function HeaderSection() {
 
             {/* Mobile Menu */}
             {mobileMenuOpen && (
-                <div className="md:hidden border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95 absolute top-16 left-0 right-0 z-50">
+                <div className="md:hidden border-b border-border/40 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/95 absolute top-16 left-0 right-0 z-50">
                     <div className="container mx-auto max-w-7xl px-4 py-4 flex flex-col gap-4">
                         <a
                             href="#features"

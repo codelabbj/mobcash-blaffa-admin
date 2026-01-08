@@ -5,8 +5,8 @@ import Link from "next/link";
 
 export function HeroSection() {
     return (
-        <section className="relative flex items-center justify-center px-4 py-24 overflow-hidden bg-gradient-to-b from-gray-100 via-gray-50 to-stone-100">
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#d4d4d8_1px,transparent_1px),linear-gradient(to_bottom,#d4d4d8_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)] opacity-30 pointer-events-none" />
+        <section className="relative flex items-center justify-center px-4 py-24 overflow-hidden bg-linear-to-b from-gray-100 via-gray-50 to-stone-100">
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#d4d4d8_1px,transparent_1px),linear-gradient(to_bottom,#d4d4d8_1px,transparent_1px)] bg-size-[4rem_4rem] mask-[radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)] opacity-30 pointer-events-none" />
             <div className="container mx-auto max-w-12xl">
                 <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
                     <div className="flex-1 text-center lg:text-left">
