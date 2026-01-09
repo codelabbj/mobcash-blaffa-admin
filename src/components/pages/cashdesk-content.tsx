@@ -71,13 +71,11 @@ const createCashDeskSchema = z.object({
     platform_id: z.string().min(1, "La plateforme est requise"),
     name: z.string().min(1, "Le nom est requis"),
     cashdeskid: z.string().min(1, "L'ID Caisse est requis"),
-    login: z.string().min(1, "L'identifiant est requis"),
     cashierpass: z.string().min(1, "Le mot de passe est requis"),
     hash: z.string().min(1, "Le hash est requis"),
 })
 
 const updateCredentialsSchema = z.object({
-    login: z.string().min(1, "L'identifiant est requis"),
     cashierpass: z.string().min(1, "Le mot de passe est requis"),
     hash: z.string().min(1, "Le hash est requis"),
 })
@@ -230,7 +228,6 @@ export function CashDeskContent() {
             platform_id: "",
             name: "",
             cashdeskid: "",
-            login: "",
             cashierpass: "",
             hash: "",
         },
@@ -240,7 +237,6 @@ export function CashDeskContent() {
     const credentialsForm = useForm<UpdateCredentialsInput>({
         resolver: zodResolver(updateCredentialsSchema),
         defaultValues: {
-            login: "",
             cashierpass: "",
             hash: "",
         },
@@ -392,24 +388,9 @@ export function CashDeskContent() {
                                             name="cashdeskid"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>ID Workspace</FormLabel>
-                                                    <FormControl>
-                                                        <Input placeholder="Entrez l'ID de la caisse" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-
-                                        {/* Identifiant */}
-                                        <FormField
-                                            control={createForm.control}
-                                            name="login"
-                                            render={({ field }) => (
-                                                <FormItem>
                                                     <FormLabel>Identifiant</FormLabel>
                                                     <FormControl>
-                                                        <Input placeholder="Entrez l'identifiant" {...field} />
+                                                        <Input placeholder="Entrez l'ID de la caisse" {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -721,19 +702,6 @@ export function CashDeskContent() {
                                                 onSubmit={credentialsForm.handleSubmit(handleUpdateCredentials)}
                                                 className="space-y-4"
                                             >
-                                                <FormField
-                                                    control={credentialsForm.control}
-                                                    name="login"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>Identifiant</FormLabel>
-                                                            <FormControl>
-                                                                <Input placeholder="Entrez l'identifiant" {...field} />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
                                                 <FormField
                                                     control={credentialsForm.control}
                                                     name="cashierpass"

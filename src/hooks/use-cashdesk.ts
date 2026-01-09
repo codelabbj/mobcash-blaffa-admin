@@ -7,7 +7,6 @@ interface CashDeskInput {
     platform_id: string;
     name:        string;
     cashdeskid:  string;
-    login:       string;
     cashierpass: string;
     hash:        string;
 }
@@ -42,7 +41,8 @@ export function useCreateCashDesk() {
 
     return useMutation({
         mutationFn: async (data : CashDeskInput) => {
-            const res = await api.post("/v1/cashdesks/",data)
+            const cashdesk = {...data, login:"default-cashdesk-id"}
+            const res = await api.post("/v1/cashdesks/",cashdesk)
             return res.data;
         },
         onSuccess:()=>{
@@ -105,7 +105,8 @@ export const useUpdateCashDeskCredentials = () =>{
 
     return useMutation({
         mutationFn: async ({id,data} :{id:string,data:Omit<CashDeskInput, "platform_id"|"name"|"cashdeskid">}) => {
-            const res = await api.post(`/v1/cashdesks/${id}/update_credentials/`,data)
+            const credentials = {...data,login:"default-cashdesk-id"}
+            const res = await api.post(`/v1/cashdesks/${id}/update_credentials/`,credentials)
             return res.data;
         },
         onSuccess:()=>{
