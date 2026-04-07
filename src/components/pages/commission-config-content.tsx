@@ -2,7 +2,7 @@
 
 import {useEffect, useState} from "react"
 import {Settings} from "lucide-react"
-import {cn, formatDate} from "@/lib/utils"
+import {formatDate} from "@/lib/utils"
 import {DashboardContent} from "@/components/layout/dashboard-content"
 import {RequestCard} from "@/components/ui/request-card"
 import {SidePanel} from "@/components/ui/side-panel"
@@ -153,7 +153,7 @@ export default function CommissionConfigContent() {
         <DashboardContent>
             <div className="flex gap-6 min-h-[500px]">
                 {/* List Section */}
-                <div className={cn("transition-all duration-300", panelOpen ? "flex-1 lg:max-w-[calc(100%-320px)]" : "flex-1")} style={{ minWidth: 0 }}>
+                <div className="flex-1 transition-all duration-300" style={{ minWidth: 0 }}>
                     {/* Header */}
                     <div className="mb-6 space-y-2">
                         <p className="text-2xl font-bold">Configuration des Commissions</p>
@@ -256,7 +256,7 @@ export default function CommissionConfigContent() {
                         setSelectedConfig(null)
                     }}
                     title="Modifier Configuration de Commission"
-                    embedded={true}
+                    embedded={false}
                     footer={
                         selectedConfig && (
                             <div className="flex gap-3">

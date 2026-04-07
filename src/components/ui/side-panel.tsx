@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useEffect, useRef } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
@@ -23,6 +24,13 @@ const widthClasses = {
 
 export function SidePanel({ isOpen, onClose, title, children, footer, width = "lg", embedded = true }: SidePanelProps) {
     const isMobile = useIsMobile()
+    const contentRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        if (isOpen && contentRef.current) {
+            contentRef.current.scrollTo({ top: 0, behavior: "auto" })
+        }
+    }, [isOpen, children])
 
     // On mobile, always use overlay mode
     if (isMobile) {
@@ -71,7 +79,7 @@ export function SidePanel({ isOpen, onClose, title, children, footer, width = "l
         return (
             <div
                 className={cn(
-                    "bg-card border border-border rounded-xl shadow-xl h-[calc(100vh-150px)] overflow-y-scroll",
+                    "bg-card border border-border rounded-xl shadow-xl h-[calc(100vh-150px)] sticky top-4 self-start",
                     "flex flex-col transition-all duration-300 overflow-hidden",
                     isOpen ? widthClasses[width] : "w-0",
                 )}
@@ -91,7 +99,7 @@ export function SidePanel({ isOpen, onClose, title, children, footer, width = "l
                 )}
 
                 {/* Content */}
-                <div className="flex-1 overflow-auto">
+                <div ref={contentRef} className="flex-1 overflow-auto">
                     <div className="p-6">{children}</div>
                 </div>
 

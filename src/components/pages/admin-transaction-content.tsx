@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Copy, ChevronRight } from "lucide-react"
 import { cn, formatDate, formatCurrency } from "@/lib/utils"
 import { DashboardContent } from "@/components/layout/dashboard-content"
 import { Card } from "@/components/ui/card"
 import { SidePanel } from "@/components/ui/side-panel"
 import { StatusBadge } from "@/components/ui/status-badge"
-import { RequestCard } from "@/components/ui/request-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FilterSection } from "@/components/ui/filter-section"
 import {
@@ -127,6 +127,52 @@ export function AdminTransactionContent() {
         setCurrentPage(1)
     }
 
+    const getTransactionUserName = (transaction: Transaction) =>
+        transaction.user_display_name || "N/A"
+
+    const getTransactionUserEmail = (transaction: Transaction) =>
+        transaction.user_email || "N/A"
+
+    const getTransactionUserId = (transaction: Transaction) =>
+        transaction.user_id || transaction.user || "N/A"
+
+    const getTransactionTypeBadgeClass = (transactionType: string) =>
+        transactionType === "DEPOSIT"
+            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+            : "bg-amber-50 text-amber-700 border-amber-200"
+
+    const handleCopyUserId = async (transaction: Transaction) => {
+        const userId = getTransactionUserId(transaction)
+        if (userId === "N/A") {
+            toast.error("Aucun ID utilisateur a copier")
+            return
+        }
+
+        try {
+            await navigator.clipboard.writeText(userId)
+            toast.success("ID utilisateur copie")
+        } catch (error) {
+            toast.error("Impossible de copier l'ID utilisateur")
+            console.error("Error copying user ID:", error)
+        }
+    }
+
+    const handleCopyExternalId = async (transaction: Transaction) => {
+        const externalId = transaction.external_id
+        if (!externalId) {
+            toast.error("Aucun ID externe a copier")
+            return
+        }
+
+        try {
+            await navigator.clipboard.writeText(externalId)
+            toast.success("ID externe copie")
+        } catch (error) {
+            toast.error("Impossible de copier l'ID externe")
+            console.error("Error copying external ID:", error)
+        }
+    }
+
     // Build platform filter options
     const platformFilterOptions = [
         { value: "all", label: "Tous" },
@@ -159,8 +205,8 @@ export function AdminTransactionContent() {
 
     return (
         <DashboardContent>
-            <div className="flex gap-6 min-h-[500px] overflow-hidden">
-                <div className={cn("transition-all duration-300 overflow-y-auto", panelOpen ? "flex-1 lg:max-w-[calc(100%-320px)]" : "flex-1")} style={{ minWidth: 0 }}>
+            <div className="flex gap-6 min-h-[500px]">
+                <div className="flex-1 transition-all duration-300" style={{ minWidth: 0 }}>
                     {/* Header */}
                     <div className="mb-6">
                         <h1 className="text-2xl font-bold">Transactions Administrateur</h1>
@@ -257,19 +303,48 @@ export function AdminTransactionContent() {
                             ))
                         ) : paginatedData.length > 0 ? (
                             paginatedData.map((transaction) => (
-                                <RequestCard
+                                <div
                                     key={transaction.id}
-                                    title={transaction.transaction_id}
-                                    subtitle={transaction.platform_name}
-                                    amount={formatCurrency(Number(transaction.amount))}
-                                    badge={<StatusBadge status={transaction.status === "COMPLETED" ? "completed" : transaction.status === "FAILED" ? "failed" : "pending"} />}
-                                    details={[
-                                        { label: "Type", value: transaction.transaction_type_display },
-                                        { label: "Date", value: formatDate(transaction.created_at) }
-                                    ]}
                                     onClick={() => handleSelectTransaction(transaction)}
-                                    isSelected={selectedTransaction?.id === transaction.id}
-                                />
+                                    className={cn(
+                                        "p-4 border-2 rounded-lg bg-card cursor-pointer transition-all hover:shadow-md",
+                                        selectedTransaction?.id === transaction.id
+                                            ? "border-primary shadow-md"
+                                            : "border-border",
+                                    )}
+                                >
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="min-w-0">
+                                            <p className="font-semibold text-foreground truncate">{transaction.transaction_id}</p>
+                                            <p className="text-sm text-muted-foreground truncate">{transaction.platform_name}</p>
+                                            <p className="text-sm text-muted-foreground truncate">{getTransactionUserEmail(transaction)}</p>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                                            <span
+                                                className={cn(
+                                                    "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
+                                                    getTransactionTypeBadgeClass(transaction.transaction_type),
+                                                )}
+                                            >
+                                                {transaction.transaction_type_display}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex flex-col items-start sm:items-end gap-2">
+                                            <p className="text-xs text-muted-foreground whitespace-nowrap">
+                                                {formatDate(transaction.created_at)}
+                                            </p>
+                                            <div className="flex items-center gap-3">
+                                                <p className="font-bold text-foreground whitespace-nowrap">
+                                                    {formatCurrency(Number(transaction.amount))}
+                                                </p>
+                                                <StatusBadge status={transaction.status === "COMPLETED" ? "completed" : transaction.status === "FAILED" ? "failed" : "pending"} />
+                                                <ChevronRight className="w-4 h-4 text-primary" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             ))
                         ) : (
                             <div className="flex items-center justify-center py-12 bg-card border border-border rounded-lg">
@@ -335,7 +410,7 @@ export function AdminTransactionContent() {
                         setSelectedTransaction(null)
                     }}
                     title="Détails de la transaction"
-                    embedded={true}
+                    embedded={false}
                 >
                     {selectedTransaction && (
                         <div className="space-y-6">
@@ -379,6 +454,36 @@ export function AdminTransactionContent() {
                                 </div>
                             </div>
 
+                            {/* User Details */}
+                            <div className="border-t border-border pt-6">
+                                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Détails utilisateur</h3>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-muted-foreground">Nom utilisateur</span>
+                                        <span className="text-sm font-medium text-foreground">{getTransactionUserName(selectedTransaction)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-muted-foreground">Email</span>
+                                        <span className="text-sm font-medium text-foreground">{getTransactionUserEmail(selectedTransaction)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                        <span className="text-sm text-muted-foreground">ID utilisateur</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium text-foreground">{getTransactionUserId(selectedTransaction)}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleCopyUserId(selectedTransaction)}
+                                                className="text-muted-foreground hover:text-foreground transition-colors"
+                                                aria-label="Copier l'ID utilisateur"
+                                                title="Copier l'ID utilisateur"
+                                            >
+                                                <Copy className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Dates */}
                             <div className="border-t border-border pt-6">
                                 <h3 className="text-sm font-semibold text-muted-foreground mb-3">Dates</h3>
@@ -402,7 +507,18 @@ export function AdminTransactionContent() {
                                 <div className="space-y-3">
                                     <div className="flex justify-between">
                                         <span className="text-sm text-muted-foreground">ID externe</span>
-                                        <span className="text-sm font-medium text-foreground">{selectedTransaction.external_id}</span>
+                                        <div className="inline-flex items-center">
+                                            <span className="text-sm font-medium text-foreground">{selectedTransaction.external_id}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleCopyExternalId(selectedTransaction)}
+                                                className="text-muted-foreground hover:text-foreground transition-colors ml-2"
+                                                aria-label="Copier l'ID externe"
+                                                title="Copier l'ID externe"
+                                            >
+                                                <Copy className="h-4 w-4" />
+                                            </button>
+                                        </div>
                                     </div>
                                     {selectedTransaction.mobcash_code && (
                                         <div className="flex justify-between">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { User } from "lucide-react"
-import { cn, formatDate, formatCurrency } from "@/lib/utils"
+import { formatDate, formatCurrency } from "@/lib/utils"
 import { DashboardContent } from "@/components/layout/dashboard-content"
 import { FilterSection } from "@/components/ui/filter-section"
 import { RequestCard } from "@/components/ui/request-card"
@@ -274,7 +274,7 @@ export function UsersContent() {
     return (
         <DashboardContent>
             <div className="flex gap-6 min-h-[500px]">
-                <div className={cn("transition-all duration-300", panelOpen ? "flex-1 lg:max-w-[calc(100%-320px)]" : "flex-1")} style={{minWidth: 0}}>
+                <div className="flex-1 transition-all duration-300" style={{minWidth: 0}}>
                     <div className="mb-6 flex items-center justify-between">
                         <div>
                             <p className="text-2xl font-bold">Utilisateurs</p>
@@ -396,7 +396,7 @@ export function UsersContent() {
                         setShowAddPermissionForm(false)
                     }}
                     title={showAddPermissionForm ? "Ajouter une permission" : "Détails de l'utilisateur"}
-                    embedded={true}
+                    embedded={false}
                     footer={
                         showAddPermissionForm ? (
                             <div className="flex gap-3">

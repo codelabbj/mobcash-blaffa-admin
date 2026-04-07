@@ -2,7 +2,7 @@
 
 import {useEffect, useState} from "react"
 import {Boxes, Plus} from "lucide-react"
-import {cn, formatDate} from "@/lib/utils"
+import {formatDate} from "@/lib/utils"
 import {DashboardContent} from "@/components/layout/dashboard-content"
 import {FilterSection} from "@/components/ui/filter-section"
 import {RequestCard} from "@/components/ui/request-card"
@@ -246,7 +246,7 @@ export function PlatformsContent() {
             <div className="flex gap-6 min-h-[500px]">
 
                 {/* List Section */}
-                <div className={cn("transition-all duration-300", panelOpen ? "flex-1 lg:max-w-[calc(100%-320px)]" : "flex-1")} style={{minWidth: 0}}>
+                <div className="flex-1 transition-all duration-300" style={{minWidth: 0}}>
                     {/* Header */}
                     <div className="mb-6 space-y-2 flex justify-between items-start">
                         <div>
@@ -260,7 +260,7 @@ export function PlatformsContent() {
                     </div>
 
                     {/* Filters */}
-                    <div className={cn("mb-6 transition-all duration-300", panelOpen && "lg:max-w-[calc(100%-320px)]")}>
+                    <div className="mb-6 transition-all duration-300">
                         <FilterSection
                             searchValue={searchQuery}
                             onSearchChange={setSearchQuery}
@@ -371,7 +371,7 @@ export function PlatformsContent() {
                         setEditMode(false)
                     }}
                     title={editMode ? "Éditer la plateforme" : "Détails de la Plateforme"}
-                    embedded={true}
+                    embedded={false}
                     footer={
                         !editMode && selectedPlatform && (
                             <Button onClick={() => setEditMode(true)} className="w-full">

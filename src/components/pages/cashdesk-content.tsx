@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import {Plus, Wallet, Check, ChevronsUpDown} from "lucide-react"
-import { cn, formatDate } from "@/lib/utils"
+import { formatDate } from "@/lib/utils"
 import { DashboardContent } from "@/components/layout/dashboard-content"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -313,10 +313,7 @@ export function CashDeskContent() {
             <div className="flex gap-6 min-h-[500px]">
                 {/* Main Content */}
                 <div
-                    className={cn(
-                        "transition-all duration-300 flex-1",
-                        panelOpen ? "lg:max-w-[calc(100%-320px)]" : ""
-                    )}
+                    className="transition-all duration-300 flex-1"
                     style={{ minWidth: 0 }}
                 >
                     {/* Header */}
@@ -550,7 +547,7 @@ export function CashDeskContent() {
                     isOpen={panelOpen}
                     onClose={() => setPanelOpen(false)}
                     title="Détails Caisse"
-                    embedded={true}
+                    embedded={false}
                 >
                     {selectedCashDesk && (
                         <div className="space-y-6">
