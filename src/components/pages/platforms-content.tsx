@@ -43,11 +43,13 @@ interface PlatformFormData {
     code: string
     api_base_url: string
     description: string
+    betmomo_token: string
 }
 
 interface PlatformEditData {
     description: string
     is_active: boolean
+    betmomo_token: string
 }
 
 export function PlatformsContent() {
@@ -65,17 +67,18 @@ export function PlatformsContent() {
     const [isProcessing, setIsProcessing] = useState(false)
     const [isLoadingStats, setIsLoadingStats] = useState(false)
 
-    // Form states
     const [formData, setFormData] = useState<PlatformFormData>({
         name: "",
         code: "",
         api_base_url: "",
         description: "",
+        betmomo_token: "",
     })
 
     const [editFormData, setEditFormData] = useState<PlatformEditData>({
         description: "",
         is_active: true,
+        betmomo_token: "",
     })
 
     useEffect(() => {
@@ -145,6 +148,7 @@ export function PlatformsContent() {
             code: "",
             api_base_url: "",
             description: "",
+            betmomo_token: "",
         })
     }
 
@@ -156,6 +160,7 @@ export function PlatformsContent() {
         setEditFormData({
             description: "",
             is_active: platform.is_active,
+            betmomo_token: platform.betmomo_token || "",
         })
         setPanelOpen(true)
 
@@ -209,6 +214,7 @@ export function PlatformsContent() {
                     data: {
                         description: editFormData.description,
                         is_active: editFormData.is_active,
+                        betmomo_token: editFormData.betmomo_token,
                     },
                 },
                 {
@@ -229,6 +235,7 @@ export function PlatformsContent() {
         setEditFormData({
             description: "",
             is_active: selectedPlatform?.is_active ?? true,
+            betmomo_token: selectedPlatform?.betmomo_token ?? "",
         })
     }
 
@@ -422,6 +429,12 @@ export function PlatformsContent() {
                                                 <span className="text-sm text-muted-foreground">Créée le</span>
                                                 <span className="text-sm font-medium text-foreground">{formatDate(selectedPlatform.created_at)}</span>
                                             </div>
+                                            {selectedPlatform.betmomo_token && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-sm text-muted-foreground">Token Betmomo</span>
+                                                    <span className="text-sm font-medium text-foreground">{selectedPlatform.betmomo_token}</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -492,6 +505,23 @@ export function PlatformsContent() {
                                                         })
                                                     }
                                                     className="mt-1 min-h-24"
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label htmlFor="edit_betmomo_token" className="text-sm text-muted-foreground">
+                                                    Token Betmomo
+                                                </Label>
+                                                <Input
+                                                    id="edit_betmomo_token"
+                                                    placeholder="Token Betmomo"
+                                                    value={editFormData.betmomo_token}
+                                                    onChange={(e) =>
+                                                        setEditFormData({
+                                                            ...editFormData,
+                                                            betmomo_token: e.target.value,
+                                                        })
+                                                    }
+                                                    className="mt-1"
                                                 />
                                             </div>
                                             <div className="flex items-center gap-3">
@@ -575,6 +605,18 @@ export function PlatformsContent() {
                                 value={formData.description}
                                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                                 className="mt-1 min-h-24"
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="betmomo_token" className="text-sm text-muted-foreground">
+                                Token Betmomo
+                            </Label>
+                            <Input
+                                id="betmomo_token"
+                                placeholder="Token Betmomo"
+                                value={formData.betmomo_token}
+                                onChange={(e) => setFormData({...formData, betmomo_token: e.target.value})}
+                                className="mt-1"
                             />
                         </div>
                     </div>

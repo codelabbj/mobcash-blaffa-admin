@@ -127,6 +127,7 @@ export interface Platform {
     code: string;
     is_active: boolean;
     created_at: Date;
+    betmomo_token?: string;
 }
 
 export interface PlatformStats {

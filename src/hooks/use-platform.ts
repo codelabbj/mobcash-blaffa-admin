@@ -8,11 +8,13 @@ interface PlatformInput {
     code:         string;
     api_base_url: string;
     description:  string;
+    betmomo_token: string;
 }
 
 interface PlatformUpdateInput {
     description: string,
-    is_active: boolean
+    is_active: boolean,
+    betmomo_token: string
 }
 
 interface Filters {
