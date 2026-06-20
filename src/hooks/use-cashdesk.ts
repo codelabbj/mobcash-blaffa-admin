@@ -11,6 +11,12 @@ interface CashDeskInput {
     hash:        string;
 }
 
+interface CashDeskCredentialsInput {
+    login:       string;
+    cashierpass: string;
+    hash:        string;
+}
+
 interface CashDeskUpdateInput {
     name: string;
     is_active: boolean;
@@ -104,7 +110,7 @@ export const useUpdateCashDeskCredentials = () =>{
     const query = useQueryClient()
 
     return useMutation({
-        mutationFn: async ({id,data} :{id:string,data:Pick<CashDeskInput, "login"|"cashierpass"|"hash">}) => {
+        mutationFn: async ({id,data} :{id:string,data: CashDeskCredentialsInput}) => {
             const res = await api.post(`/v1/cashdesks/${id}/update_credentials/`, data)
             return res.data;
         },
