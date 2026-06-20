@@ -160,7 +160,7 @@ export function PlatformsContent() {
         setEditFormData({
             description: "",
             is_active: platform.is_active,
-            betmomo_token: platform.betmomo_token || "",
+            betmomo_token: "",
         })
         setPanelOpen(true)
 
@@ -235,7 +235,7 @@ export function PlatformsContent() {
         setEditFormData({
             description: "",
             is_active: selectedPlatform?.is_active ?? true,
-            betmomo_token: selectedPlatform?.betmomo_token ?? "",
+            betmomo_token: "",
         })
     }
 
@@ -429,10 +429,10 @@ export function PlatformsContent() {
                                                 <span className="text-sm text-muted-foreground">Créée le</span>
                                                 <span className="text-sm font-medium text-foreground">{formatDate(selectedPlatform.created_at)}</span>
                                             </div>
-                                            {selectedPlatform.betmomo_token && (
+                                            {selectedPlatform.uses_betmomo && (
                                                 <div className="flex justify-between">
-                                                    <span className="text-sm text-muted-foreground">Token Betmomo</span>
-                                                    <span className="text-sm font-medium text-foreground">{selectedPlatform.betmomo_token}</span>
+                                                    <span className="text-sm text-muted-foreground">Provider</span>
+                                                    <span className="text-sm font-medium text-foreground">BetMomo (BeWallet)</span>
                                                 </div>
                                             )}
                                         </div>
@@ -509,11 +509,11 @@ export function PlatformsContent() {
                                             </div>
                                             <div>
                                                 <Label htmlFor="edit_betmomo_token" className="text-sm text-muted-foreground">
-                                                    Token Betmomo
+                                                    Token BetMomo (dat_...)
                                                 </Label>
                                                 <Input
                                                     id="edit_betmomo_token"
-                                                    placeholder="Token Betmomo"
+                                                    placeholder={selectedPlatform.uses_betmomo ? "Laisser vide pour conserver le token actuel" : "Token app dealer BeWallet"}
                                                     value={editFormData.betmomo_token}
                                                     onChange={(e) =>
                                                         setEditFormData({
@@ -609,11 +609,11 @@ export function PlatformsContent() {
                         </div>
                         <div>
                             <Label htmlFor="betmomo_token" className="text-sm text-muted-foreground">
-                                Token Betmomo
+                                Token BetMomo (dat_...)
                             </Label>
                             <Input
                                 id="betmomo_token"
-                                placeholder="Token Betmomo"
+                                placeholder="Token app dealer BeWallet External API"
                                 value={formData.betmomo_token}
                                 onChange={(e) => setFormData({...formData, betmomo_token: e.target.value})}
                                 className="mt-1"

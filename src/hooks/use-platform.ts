@@ -14,7 +14,7 @@ interface PlatformInput {
 interface PlatformUpdateInput {
     description: string,
     is_active: boolean,
-    betmomo_token: string
+    betmomo_token?: string
 }
 
 interface Filters {
@@ -61,7 +61,12 @@ export function useUpdatePlatform(){
 
     return useMutation({
         mutationFn: async ({id,data}:{id:string,data : PlatformUpdateInput}) =>{
-            const res = await  api.patch(`/v1/platforms/${id}/`, data)
+            const payload = {...data}
+            if (!payload.betmomo_token) {
+                delete payload.betmomo_token
+            }
+            const res = await api.patch(`/v1/platforms/${id}/`, payload)
+            return res.data
         },
         onSuccess:() =>{
             toast.success("Plateforme mis à jour avec succès")

@@ -127,6 +127,7 @@ export interface Platform {
     code: string;
     is_active: boolean;
     created_at: Date;
+    uses_betmomo?: boolean;
     betmomo_token?: string;
 }
 
