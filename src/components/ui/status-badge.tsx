@@ -85,7 +85,7 @@ export function StatusBadge({ status, label, showDot = true, className }: Status
             )}
         >
       {showDot && <span className={cn("w-2 h-2 rounded-full", styles.dot)} />}
-            {statusLabel.find((s)=> s.value === status)?.label || status}
+            {label || statusLabel.find((s)=> s.value === status)?.label || status}
     </span>
     )
 }

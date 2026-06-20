@@ -3,24 +3,36 @@ import api from "@/lib/api";
 import {PaginatedContent, Platform, PlatformStats} from "@/lib/types";
 import {toast} from "sonner";
 
-interface PlatformInput {
+interface BetmomoCredentialsInput {
+    betmomo_token?: string;
+    betmomo_email?: string;
+    betmomo_password?: string;
+}
+
+interface PlatformInput extends BetmomoCredentialsInput {
     name:         string;
     code:         string;
     api_base_url: string;
     description:  string;
-    betmomo_token: string;
 }
 
-interface PlatformUpdateInput {
-    description: string,
-    is_active: boolean,
-    betmomo_token?: string
+interface PlatformUpdateInput extends BetmomoCredentialsInput {
+    description: string;
+    is_active: boolean;
 }
 
 interface Filters {
     page? : number,
     search? : string,
     is_active ?: string,
+}
+
+function stripEmptyBetmomoFields<T extends BetmomoCredentialsInput>(data: T): T {
+    const payload = {...data}
+    if (!payload.betmomo_token) delete payload.betmomo_token
+    if (!payload.betmomo_email) delete payload.betmomo_email
+    if (!payload.betmomo_password) delete payload.betmomo_password
+    return payload
 }
 
 export function usePlatform(data: Filters){
@@ -42,7 +54,7 @@ export function useCreatePlatform(){
 
     return useMutation({
         mutationFn: async (data:PlatformInput) =>{
-            const res = await api.post("/v1/platforms/", data);
+            const res = await api.post("/v1/platforms/", stripEmptyBetmomoFields(data));
             return res.data
         },
         onSuccess:() =>{
@@ -61,11 +73,7 @@ export function useUpdatePlatform(){
 
     return useMutation({
         mutationFn: async ({id,data}:{id:string,data : PlatformUpdateInput}) =>{
-            const payload = {...data}
-            if (!payload.betmomo_token) {
-                delete payload.betmomo_token
-            }
-            const res = await api.patch(`/v1/platforms/${id}/`, payload)
+            const res = await api.patch(`/v1/platforms/${id}/`, stripEmptyBetmomoFields(data))
             return res.data
         },
         onSuccess:() =>{

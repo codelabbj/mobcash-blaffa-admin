@@ -44,12 +44,16 @@ interface PlatformFormData {
     api_base_url: string
     description: string
     betmomo_token: string
+    betmomo_email: string
+    betmomo_password: string
 }
 
 interface PlatformEditData {
     description: string
     is_active: boolean
     betmomo_token: string
+    betmomo_email: string
+    betmomo_password: string
 }
 
 export function PlatformsContent() {
@@ -73,12 +77,16 @@ export function PlatformsContent() {
         api_base_url: "",
         description: "",
         betmomo_token: "",
+        betmomo_email: "",
+        betmomo_password: "",
     })
 
     const [editFormData, setEditFormData] = useState<PlatformEditData>({
         description: "",
         is_active: true,
         betmomo_token: "",
+        betmomo_email: "",
+        betmomo_password: "",
     })
 
     useEffect(() => {
@@ -149,6 +157,8 @@ export function PlatformsContent() {
             api_base_url: "",
             description: "",
             betmomo_token: "",
+            betmomo_email: "",
+            betmomo_password: "",
         })
     }
 
@@ -158,9 +168,11 @@ export function PlatformsContent() {
         setPlatformStats(null)
         setIsLoadingStats(true)
         setEditFormData({
-            description: "",
+            description: platform.description || "",
             is_active: platform.is_active,
             betmomo_token: "",
+            betmomo_email: "",
+            betmomo_password: "",
         })
         setPanelOpen(true)
 
@@ -215,6 +227,8 @@ export function PlatformsContent() {
                         description: editFormData.description,
                         is_active: editFormData.is_active,
                         betmomo_token: editFormData.betmomo_token,
+                        betmomo_email: editFormData.betmomo_email,
+                        betmomo_password: editFormData.betmomo_password,
                     },
                 },
                 {
@@ -233,9 +247,11 @@ export function PlatformsContent() {
     const handleEditCancel = () => {
         setEditMode(false)
         setEditFormData({
-            description: "",
+            description: selectedPlatform?.description || "",
             is_active: selectedPlatform?.is_active ?? true,
             betmomo_token: "",
+            betmomo_email: "",
+            betmomo_password: "",
         })
     }
 
@@ -304,8 +320,16 @@ export function PlatformsContent() {
                                         icon={<Boxes className="w-6 h-6" />}
                                         title={platform.name}
                                         subtitle={platform.code}
-                                        badge={<StatusBadge status={platform.is_active ? "active" : "inactive"} />}
+                                        badge={
+                                            <div className="flex gap-1">
+                                                {platform.uses_betmomo && (
+                                                    <StatusBadge status="processing" label="BetMomo" />
+                                                )}
+                                                <StatusBadge status={platform.is_active ? "active" : "inactive"} />
+                                            </div>
+                                        }
                                         details={[
+                                            {label: "Provider", value: platform.uses_betmomo ? "BetMomo" : "MobCash"},
                                             {label: "Créée le", value: formatDate(platform.created_at)},
                                         ]}
                                         onClick={() => handleSelectPlatform(platform)}
@@ -431,8 +455,14 @@ export function PlatformsContent() {
                                             </div>
                                             {selectedPlatform.uses_betmomo && (
                                                 <div className="flex justify-between">
-                                                    <span className="text-sm text-muted-foreground">Provider</span>
-                                                    <span className="text-sm font-medium text-foreground">BetMomo (BeWallet)</span>
+                                                    <span className="text-sm text-muted-foreground">Token External (dat_)</span>
+                                                    <span className="text-sm font-medium text-foreground">Configuré</span>
+                                                </div>
+                                            )}
+                                            {selectedPlatform.has_betmomo_credentials && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-sm text-muted-foreground">Identifiants solde</span>
+                                                    <span className="text-sm font-medium text-foreground">Configurés</span>
                                                 </div>
                                             )}
                                         </div>
@@ -507,22 +537,81 @@ export function PlatformsContent() {
                                                     className="mt-1 min-h-24"
                                                 />
                                             </div>
-                                            <div>
-                                                <Label htmlFor="edit_betmomo_token" className="text-sm text-muted-foreground">
-                                                    Token BetMomo (dat_...)
-                                                </Label>
-                                                <Input
-                                                    id="edit_betmomo_token"
-                                                    placeholder={selectedPlatform.uses_betmomo ? "Laisser vide pour conserver le token actuel" : "Token app dealer BeWallet"}
-                                                    value={editFormData.betmomo_token}
-                                                    onChange={(e) =>
-                                                        setEditFormData({
-                                                            ...editFormData,
-                                                            betmomo_token: e.target.value,
-                                                        })
-                                                    }
-                                                    className="mt-1"
-                                                />
+                                            <div className="border-t border-border pt-4">
+                                                <h4 className="text-sm font-semibold text-muted-foreground mb-3">
+                                                    Configuration BetMomo
+                                                </h4>
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <Label htmlFor="edit_betmomo_token" className="text-sm text-muted-foreground">
+                                                            Token External (dat_...)
+                                                        </Label>
+                                                        <Input
+                                                            id="edit_betmomo_token"
+                                                            type="password"
+                                                            placeholder={
+                                                                selectedPlatform.uses_betmomo
+                                                                    ? "Laisser vide pour conserver le token actuel"
+                                                                    : "Coller le token dat_... fourni par BeWallet"
+                                                            }
+                                                            value={editFormData.betmomo_token}
+                                                            onChange={(e) =>
+                                                                setEditFormData({
+                                                                    ...editFormData,
+                                                                    betmomo_token: e.target.value,
+                                                                })
+                                                            }
+                                                            className="mt-1"
+                                                        />
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            Stocké chiffré en base. Utilisé pour topup et payout.
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <Label htmlFor="edit_betmomo_email" className="text-sm text-muted-foreground">
+                                                            Email dealer (solde)
+                                                        </Label>
+                                                        <Input
+                                                            id="edit_betmomo_email"
+                                                            type="email"
+                                                            placeholder={
+                                                                selectedPlatform.has_betmomo_credentials
+                                                                    ? "Laisser vide pour conserver l'email actuel"
+                                                                    : "Email compte dealer BetMomo"
+                                                            }
+                                                            value={editFormData.betmomo_email}
+                                                            onChange={(e) =>
+                                                                setEditFormData({
+                                                                    ...editFormData,
+                                                                    betmomo_email: e.target.value,
+                                                                })
+                                                            }
+                                                            className="mt-1"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label htmlFor="edit_betmomo_password" className="text-sm text-muted-foreground">
+                                                            Mot de passe dealer (solde)
+                                                        </Label>
+                                                        <Input
+                                                            id="edit_betmomo_password"
+                                                            type="password"
+                                                            placeholder={
+                                                                selectedPlatform.has_betmomo_credentials
+                                                                    ? "Laisser vide pour conserver le mot de passe actuel"
+                                                                    : "Mot de passe compte dealer"
+                                                            }
+                                                            value={editFormData.betmomo_password}
+                                                            onChange={(e) =>
+                                                                setEditFormData({
+                                                                    ...editFormData,
+                                                                    betmomo_password: e.target.value,
+                                                                })
+                                                            }
+                                                            className="mt-1"
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <Switch
@@ -607,17 +696,54 @@ export function PlatformsContent() {
                                 className="mt-1 min-h-24"
                             />
                         </div>
-                        <div>
-                            <Label htmlFor="betmomo_token" className="text-sm text-muted-foreground">
-                                Token BetMomo (dat_...)
-                            </Label>
-                            <Input
-                                id="betmomo_token"
-                                placeholder="Token app dealer BeWallet External API"
-                                value={formData.betmomo_token}
-                                onChange={(e) => setFormData({...formData, betmomo_token: e.target.value})}
-                                className="mt-1"
-                            />
+                        <div className="border-t border-border pt-4">
+                            <h4 className="text-sm font-semibold text-muted-foreground mb-3">
+                                Configuration BetMomo (optionnel)
+                            </h4>
+                            <div className="space-y-4">
+                                <div>
+                                    <Label htmlFor="betmomo_token" className="text-sm text-muted-foreground">
+                                        Token External (dat_...)
+                                    </Label>
+                                    <Input
+                                        id="betmomo_token"
+                                        type="password"
+                                        placeholder="Coller le token dat_... fourni par BeWallet"
+                                        value={formData.betmomo_token}
+                                        onChange={(e) => setFormData({...formData, betmomo_token: e.target.value})}
+                                        className="mt-1"
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Stocké chiffré en base par plateforme. Requis pour activer BetMomo.
+                                    </p>
+                                </div>
+                                <div>
+                                    <Label htmlFor="betmomo_email" className="text-sm text-muted-foreground">
+                                        Email dealer (solde)
+                                    </Label>
+                                    <Input
+                                        id="betmomo_email"
+                                        type="email"
+                                        placeholder="Email compte dealer BetMomo"
+                                        value={formData.betmomo_email}
+                                        onChange={(e) => setFormData({...formData, betmomo_email: e.target.value})}
+                                        className="mt-1"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="betmomo_password" className="text-sm text-muted-foreground">
+                                        Mot de passe dealer (solde)
+                                    </Label>
+                                    <Input
+                                        id="betmomo_password"
+                                        type="password"
+                                        placeholder="Mot de passe compte dealer"
+                                        value={formData.betmomo_password}
+                                        onChange={(e) => setFormData({...formData, betmomo_password: e.target.value})}
+                                        className="mt-1"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div className="flex gap-2 justify-end">
