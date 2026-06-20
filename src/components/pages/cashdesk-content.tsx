@@ -76,6 +76,7 @@ const createCashDeskSchema = z.object({
 })
 
 const updateCredentialsSchema = z.object({
+    login: z.string().min(1, "Le login est requis"),
     cashierpass: z.string().min(1, "Le mot de passe est requis"),
     hash: z.string().min(1, "Le hash est requis"),
 })
@@ -237,6 +238,7 @@ export function CashDeskContent() {
     const credentialsForm = useForm<UpdateCredentialsInput>({
         resolver: zodResolver(updateCredentialsSchema),
         defaultValues: {
+            login: "",
             cashierpass: "",
             hash: "",
         },
@@ -699,6 +701,19 @@ export function CashDeskContent() {
                                                 onSubmit={credentialsForm.handleSubmit(handleUpdateCredentials)}
                                                 className="space-y-4"
                                             >
+                                                <FormField
+                                                    control={credentialsForm.control}
+                                                    name="login"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Login</FormLabel>
+                                                            <FormControl>
+                                                                <Input placeholder="Entrez le login MobCash" {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
                                                 <FormField
                                                     control={credentialsForm.control}
                                                     name="cashierpass"

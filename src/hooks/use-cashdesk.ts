@@ -104,9 +104,8 @@ export const useUpdateCashDeskCredentials = () =>{
     const query = useQueryClient()
 
     return useMutation({
-        mutationFn: async ({id,data} :{id:string,data:Omit<CashDeskInput, "platform_id"|"name"|"cashdeskid">}) => {
-            const credentials = {...data,login:"default-cashdesk-id"}
-            const res = await api.post(`/v1/cashdesks/${id}/update_credentials/`,credentials)
+        mutationFn: async ({id,data} :{id:string,data:Pick<CashDeskInput, "login"|"cashierpass"|"hash">}) => {
+            const res = await api.post(`/v1/cashdesks/${id}/update_credentials/`, data)
             return res.data;
         },
         onSuccess:()=>{
