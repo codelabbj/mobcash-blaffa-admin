@@ -14,6 +14,7 @@ import {
 import { useSidebar } from "@/components/ui/sidebar"
 import { useAuth } from "@/providers/auth-provider"
 import { useLogout } from "@/hooks/use-auth"
+import { features } from "@/lib/env-config"
 
 export function MobileTopbar() {
   const { toggleSidebar } = useSidebar()
@@ -74,12 +75,14 @@ export function MobileTopbar() {
           <DropdownMenuContent side="bottom" align="end" className="w-56">
             <DropdownMenuLabel className="text-xs">Mon Compte</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/profile" className="cursor-pointer">
-                <User className="w-4 h-4" />
-                <span>Profil</span>
-              </Link>
-            </DropdownMenuItem>
+            {features.profile && (
+              <DropdownMenuItem asChild>
+                <Link href="/profile" className="cursor-pointer">
+                  <User className="w-4 h-4" />
+                  <span>Profil</span>
+                </Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" className="cursor-pointer" onClick={handleLogout}>
               <LogOut className="w-4 h-4" />

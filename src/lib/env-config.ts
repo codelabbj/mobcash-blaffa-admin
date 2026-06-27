@@ -2,7 +2,7 @@
  * Configuration centralisée MobCash Admin (variables d'environnement).
  *
  * API : NEXT_PUBLIC_API_BASE_URL (prioritaire) ou NEXT_PUBLIC_BASE_URL (legacy).
- * Feature flags : absent ou vide → true (tout activé par défaut).
+ * Feature flags : variable absente ou vide → true (tout activé par défaut).
  */
 
 export function envBool(raw: string | undefined, defaultValue = true): boolean {
@@ -28,32 +28,87 @@ export const apiConfig = {
   },
 } as const
 
-export const features = {
-  dashboard: envBool(process.env.NEXT_PUBLIC_FEATURE_DASHBOARD),
-  recharges: envBool(process.env.NEXT_PUBLIC_FEATURE_RECHARGES),
-  cancellations: envBool(process.env.NEXT_PUBLIC_FEATURE_CANCELLATIONS),
-  platforms: envBool(process.env.NEXT_PUBLIC_FEATURE_PLATFORMS),
-  cashdesk: envBool(process.env.NEXT_PUBLIC_FEATURE_CASHDESK),
-  users: envBool(process.env.NEXT_PUBLIC_FEATURE_USERS),
-  adminTransactions: envBool(process.env.NEXT_PUBLIC_FEATURE_ADMIN_TRANSACTIONS),
-  permissions: envBool(process.env.NEXT_PUBLIC_FEATURE_PERMISSIONS),
-  commissionConfig: envBool(process.env.NEXT_PUBLIC_FEATURE_COMMISSION_CONFIG),
-  profile: envBool(process.env.NEXT_PUBLIC_FEATURE_PROFILE),
-} as const
+/** Source unique : chaque entrée = une fonctionnalité + sa variable .env */
+export const FEATURE_DEFINITIONS = [
+  {
+    key: "dashboard",
+    env: "NEXT_PUBLIC_FEATURE_DASHBOARD",
+    label: "Tableau de bord",
+    route: "/",
+  },
+  {
+    key: "recharges",
+    env: "NEXT_PUBLIC_FEATURE_RECHARGES",
+    label: "Demandes de recharge",
+    route: "/recharges",
+  },
+  {
+    key: "cancellations",
+    env: "NEXT_PUBLIC_FEATURE_CANCELLATIONS",
+    label: "Demandes d'annulation",
+    route: "/cancellations",
+  },
+  {
+    key: "platforms",
+    env: "NEXT_PUBLIC_FEATURE_PLATFORMS",
+    label: "Plateformes",
+    route: "/platform",
+  },
+  {
+    key: "cashdesk",
+    env: "NEXT_PUBLIC_FEATURE_CASHDESK",
+    label: "Caisse",
+    route: "/cashdesk",
+  },
+  {
+    key: "users",
+    env: "NEXT_PUBLIC_FEATURE_USERS",
+    label: "Utilisateurs",
+    route: "/users",
+  },
+  {
+    key: "adminTransactions",
+    env: "NEXT_PUBLIC_FEATURE_ADMIN_TRANSACTIONS",
+    label: "Transactions admin",
+    route: "/admin-transactions",
+  },
+  {
+    key: "permissions",
+    env: "NEXT_PUBLIC_FEATURE_PERMISSIONS",
+    label: "Permissions",
+    route: "/permissions",
+  },
+  {
+    key: "commissionConfig",
+    env: "NEXT_PUBLIC_FEATURE_COMMISSION_CONFIG",
+    label: "Configuration commission",
+    route: "/commission-config",
+  },
+  {
+    key: "profile",
+    env: "NEXT_PUBLIC_FEATURE_PROFILE",
+    label: "Profil utilisateur",
+    route: "/profile",
+  },
+] as const
 
-export type FeatureKey = keyof typeof features
+export type FeatureKey = (typeof FEATURE_DEFINITIONS)[number]["key"]
 
-export const routeFeatureMap: { prefix: string; feature: FeatureKey }[] = [
-  { prefix: "/admin-transactions", feature: "adminTransactions" },
-  { prefix: "/commission-config", feature: "commissionConfig" },
-  { prefix: "/cancellations", feature: "cancellations" },
-  { prefix: "/recharges", feature: "recharges" },
-  { prefix: "/permissions", feature: "permissions" },
-  { prefix: "/platform", feature: "platforms" },
-  { prefix: "/cashdesk", feature: "cashdesk" },
-  { prefix: "/profile", feature: "profile" },
-  { prefix: "/users", feature: "users" },
-]
+function buildFeatures(): Record<FeatureKey, boolean> {
+  const out = {} as Record<FeatureKey, boolean>
+  for (const def of FEATURE_DEFINITIONS) {
+    out[def.key] = envBool(process.env[def.env])
+  }
+  return out
+}
+
+export const features = buildFeatures()
+
+export const routeFeatureMap: { prefix: string; feature: FeatureKey }[] =
+  FEATURE_DEFINITIONS.filter((d) => d.route !== "/").map((d) => ({
+    prefix: d.route,
+    feature: d.key,
+  }))
 
 const sortedRouteMap = [...routeFeatureMap].sort((a, b) => b.prefix.length - a.prefix.length)
 
