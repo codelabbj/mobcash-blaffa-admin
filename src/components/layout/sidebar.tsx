@@ -27,58 +27,74 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {useAuth} from "@/providers/auth-provider";
 import {useLogout} from "@/hooks/use-auth";
+import { features, type FeatureKey } from "@/lib/env-config";
 
-const navItems = [
+const navItems: {
+  label: string
+  labelEn: string
+  href: string
+  icon: typeof ArrowUpRight
+  feature: FeatureKey
+}[] = [
   {
     label: "Demandes de Recharge",
     labelEn: "Recharges Requests",
     href: "/recharges",
     icon: ArrowUpRight,
+    feature: "recharges",
   },
   {
     label: "Demandes d'Annulation",
     labelEn: "Cancellation Requests",
     href: "/cancellations",
     icon: XSquare,
+    feature: "cancellations",
   },
     {
         label: "Plateformes",
         labelEn: "Platforms",
         href: "/platform",
-        icon: Boxes
-
+        icon: Boxes,
+        feature: "platforms",
     },
     {
         label: "Caisse",
         labelEn: "CashDesks",
         href: "/cashdesk",
-        icon: Wallet
+        icon: Wallet,
+        feature: "cashdesk",
     },
   {
     label: "Utilisateurs",
     labelEn: "Users",
     href: "/users",
     icon: Users,
+    feature: "users",
   },
     {
         label: "Transactions Admin",
         labelEn: "Admin Transactions",
         href: "/admin-transactions",
         icon: ArrowLeftRight,
+        feature: "adminTransactions",
     },
   {
     label: "Permissions",
     labelEn: "Permissions",
     href: "/permissions",
     icon: Shield,
+    feature: "permissions",
   },
     {
         label:"Configuration Commission",
         labelEn: "Commission Configuration",
         href: "/commission-config",
         icon: Settings,
+        feature: "commissionConfig",
     }
 ]
+
+const visibleNavItems = navItems.filter((item) => features[item.feature])
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -129,7 +145,7 @@ export function AppSidebar() {
         <SidebarGroup className="px-0">
           <SidebarGroupContent>
             <SidebarMenu className="gap-3">
-              {navItems.map((item) => {
+              {visibleNavItems.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
 
@@ -188,12 +204,14 @@ export function AppSidebar() {
               <DropdownMenuContent side="top" className="w-56">
                 <DropdownMenuLabel className="text-xs">Mon Compte</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/profile" className="cursor-pointer">
-                    <User className="w-4 h-4" />
-                    <span>Profil</span>
-                  </Link>
-                </DropdownMenuItem>
+                {features.profile && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="cursor-pointer">
+                      <User className="w-4 h-4" />
+                      <span>Profil</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" className="cursor-pointer" onClick={handleLogout}>
                   <LogOut className="w-4 h-4" />
