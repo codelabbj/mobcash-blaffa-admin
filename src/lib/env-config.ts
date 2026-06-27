@@ -13,13 +13,34 @@ export function envBool(raw: string | undefined, defaultValue = true): boolean {
   return defaultValue
 }
 
-/** URL de base de l'API backend (sans slash final). */
-export function getApiBaseUrl(): string {
-  const url =
+/** Nettoie une URL de base : trim + retire les slashes finaux. */
+export function normalizeApiBase(raw: string | undefined): string {
+  return (raw ?? "").trim().replace(/\/+$/, "")
+}
+
+function readApiBaseFromEnv(): string {
+  return (
     process.env.NEXT_PUBLIC_API_BASE_URL ||
     process.env.NEXT_PUBLIC_BASE_URL ||
     ""
-  return url.replace(/\/$/, "")
+  )
+}
+
+/**
+ * URL de base API avec slash final.
+ * Accepte : https://api.com ou https://api.com/ (les deux OK).
+ */
+export function getApiBaseUrl(): string {
+  const base = normalizeApiBase(readApiBaseFromEnv())
+  return base ? `${base}/` : ""
+}
+
+/** Joint intelligemment base + chemin (slashes ajoutés/retirés automatiquement). */
+export function apiUrl(path: string): string {
+  const base = normalizeApiBase(readApiBaseFromEnv())
+  const normalizedPath = path.trim().replace(/^\/+/, "")
+  if (!base) return `/${normalizedPath}`
+  return `${base}/${normalizedPath}`
 }
 
 export const apiConfig = {

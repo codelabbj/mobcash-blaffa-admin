@@ -1,5 +1,5 @@
 import axios from "axios"
-import { getApiBaseUrl } from "@/lib/env-config"
+import { apiUrl, getApiBaseUrl } from "@/lib/env-config"
 
 const api = axios.create({
     baseURL: getApiBaseUrl(),
@@ -32,7 +32,7 @@ api.interceptors.response.use(
                     throw new Error("No refresh token available")
                 }
 
-                const res = await axios.post(`${getApiBaseUrl()}/v1/auth/refresh/`, { refresh })
+                const res = await axios.post(apiUrl("v1/auth/refresh/"), { refresh })
                 const newToken = res.data.access
                 const newRefreshToken = res.data.refresh
 
