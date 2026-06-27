@@ -10,6 +10,7 @@ import {Eye, EyeOff} from "lucide-react";
 import Link from "next/link";
 import {Button} from "@/components/ui/button";
 import {useLogin} from "@/hooks/use-auth";
+import { AppBrandMark } from "@/components/app-brand-mark";
 
 const formSchema =z.object({
     email:z.string({message:"Veuillez entrer votre email"}).email({message:"Veuillez fournir un email valide"}),
@@ -37,18 +38,7 @@ export default function LoginPage() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-0 h-screen bg-background">
             <div className="lg:col-span-3 flex flex-col items-center justify-center space-y-8 px-8">
                 <div className="flex items-center gap-2 ">
-                    <div
-                        className="w-12 h-12 rounded-lg flex items-center justify-center text-sidebar-primary-foreground font-bold text-base flex-shrink-0"
-                        style={{
-                            background:
-                                "radial-gradient(135% 135% at 50% 50%, oklch(0.5 0.2 25) 0%, oklch(0.05 0.01 280) 100%)",
-                        }}
-                    >
-                        MB
-                    </div>
-                    <span className="text-sidebar-foreground font-bold text-xl transition-opacity duration-300">
-                        MobCash
-                    </span>
+                    <AppBrandMark />
                 </div>
 
                 <div className="w-full max-w-md space-y-6">

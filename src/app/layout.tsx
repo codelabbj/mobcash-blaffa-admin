@@ -9,9 +9,12 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 // <CHANGE> Updated metadata for admin dashboard
+const appName = process.env.NEXT_PUBLIC_APP_NAME?.trim() || "MobCash"
+const appTagline = process.env.NEXT_PUBLIC_APP_TAGLINE?.trim() || "Admin dashboard for managing recharges, cancellations, users, and permissions"
+
 export const metadata: Metadata = {
-    title: "MobcashBlaffa Admin",
-    description: "Admin dashboard for managing recharges, cancellations, users, and permissions",
+    title: `${appName} Admin`,
+    description: appTagline,
     generator: "v0.app",
     icons: {icon: "/MB.png", },
 }

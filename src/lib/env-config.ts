@@ -43,6 +43,31 @@ export function apiUrl(path: string): string {
   return `${base}/${normalizedPath}`
 }
 
+// --- Branding (white-label) ---
+
+export function getAppName(): string {
+  return (process.env.NEXT_PUBLIC_APP_NAME || "MobCash").trim()
+}
+
+export function getAppTagline(): string {
+  return (process.env.NEXT_PUBLIC_APP_TAGLINE || "Admin dashboard").trim()
+}
+
+export function getAppLogo(): string {
+  return (process.env.NEXT_PUBLIC_APP_LOGO || "").trim()
+}
+
+export function getAppShortName(): string {
+  const raw = process.env.NEXT_PUBLIC_APP_SHORT_NAME?.trim()
+  if (raw) return raw
+  return getAppName()
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "MC"
+}
+
 export const apiConfig = {
   get baseUrl() {
     return getApiBaseUrl()

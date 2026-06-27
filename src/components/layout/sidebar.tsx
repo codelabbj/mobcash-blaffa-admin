@@ -28,6 +28,7 @@ import {
 import {useAuth} from "@/providers/auth-provider";
 import {useLogout} from "@/hooks/use-auth";
 import { features, type FeatureKey } from "@/lib/env-config";
+import { AppBrandMark } from "@/components/app-brand-mark";
 
 const navItems: {
   label: string
@@ -122,21 +123,13 @@ export function AppSidebar() {
             /* onClick={toggleSidebar} */
           className="flex items-center gap-3 w-full hover:bg-primary/10 rounded-lg p-2 transition-colors group"
         >
-          <div
-            className="w-12 h-12 rounded-lg flex items-center justify-center text-sidebar-primary-foreground font-bold text-base flex-shrink-0"
-            style={{
-              background:
-                "radial-gradient(135% 135% at 50% 50%, oklch(0.5 0.2 25) 0%, oklch(0.05 0.01 280) 100%)",
-            }}
-          >
-            MB
-          </div>
-          <span className={cn(
-            "text-sidebar-foreground font-bold text-xl transition-opacity duration-300",
-            state === "collapsed" ? "opacity-0 w-0" : "opacity-100"
-          )}>
-            MobCash
-          </span>
+          <AppBrandMark
+            showName={state !== "collapsed"}
+            nameClassName={cn(
+              "text-sidebar-foreground font-bold text-xl transition-opacity duration-300",
+              state === "collapsed" ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+            )}
+          />
         </Link>
       </SidebarHeader>
 

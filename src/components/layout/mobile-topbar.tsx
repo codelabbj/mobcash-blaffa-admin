@@ -15,6 +15,7 @@ import { useSidebar } from "@/components/ui/sidebar"
 import { useAuth } from "@/providers/auth-provider"
 import { useLogout } from "@/hooks/use-auth"
 import { features } from "@/lib/env-config"
+import { AppBrandMark } from "@/components/app-brand-mark"
 
 export function MobileTopbar() {
   const { toggleSidebar } = useSidebar()
@@ -49,16 +50,10 @@ export function MobileTopbar() {
           href="/"
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"
         >
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
-            style={{
-              background:
-                "radial-gradient(135% 135% at 50% 50%, oklch(0.5 0.2 25) 0%, oklch(0.05 0.01 280) 100%)",
-            }}
-          >
-            MB
-          </div>
-          <span className="font-bold text-lg text-sidebar-foreground">MobCash</span>
+          <AppBrandMark
+            markClassName="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+            nameClassName="font-bold text-lg text-sidebar-foreground"
+          />
         </Link>
 
         {/* User Avatar */}
